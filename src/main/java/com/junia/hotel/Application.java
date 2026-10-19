@@ -2,7 +2,9 @@ package com.junia.hotel;
 
 import com.junia.hotel.exception.DataLoadingException;
 import com.junia.hotel.io.CsvHotelDataSource;
+import com.junia.hotel.io.CsvReportExporter;
 import com.junia.hotel.io.HotelDataSource;
+import com.junia.hotel.io.ReportExporter;
 import com.junia.hotel.model.Guest;
 import com.junia.hotel.model.Reservation;
 import com.junia.hotel.model.room.Room;
@@ -46,12 +48,14 @@ public class Application {
                 new LoyaltyDiscount(),
                 new LongStayDiscount(7, 0.15)));
         AvailabilityService availabilityService = new AvailabilityService(rooms, reservations);
+        Clock clock = Clock.systemDefaultZone();
         ReservationService reservationService = new ReservationService(rooms, guests, reservations,
-                availabilityService, pricingService, new CancellationPolicyResolver(), Clock.systemDefaultZone());
+                availabilityService, pricingService, new CancellationPolicyResolver(), clock);
         ReportService reportService = new ReportService(rooms, reservations);
         ReservationHistory history = new ReservationHistory();
         reservationService.subscribe(new ConsoleNotifier(System.out));
         reservationService.subscribe(history);
+        ReportExporter reportExporter = new CsvReportExporter();
 
         try {
             ImportResult result = new DataImportService(dataSource, rooms, guests, reservationService).importAll();
@@ -66,7 +70,8 @@ public class Application {
 
         try (Scanner scanner = new Scanner(System.in)) {
             ConsoleInput input = new ConsoleInput(scanner, System.out);
-            new ConsoleMenu(reservationService, availabilityService, reportService, history, input, System.out).run();
+            new ConsoleMenu(reservationService, availabilityService, reportService, history,
+                    reportExporter, clock, input, System.out).run();
         }
     }
 }

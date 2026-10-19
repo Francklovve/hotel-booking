@@ -1,6 +1,8 @@
 package com.junia.hotel.ui;
 
 import com.junia.hotel.exception.BookingException;
+import com.junia.hotel.exception.DataExportException;
+import com.junia.hotel.io.ReportExporter;
 import com.junia.hotel.model.DateRange;
 import com.junia.hotel.model.Reservation;
 import com.junia.hotel.model.room.Room;
@@ -8,14 +10,16 @@ import com.junia.hotel.model.room.RoomType;
 import com.junia.hotel.pricing.PriceQuote;
 import com.junia.hotel.service.AvailabilityService;
 import com.junia.hotel.service.CancellationResult;
+import com.junia.hotel.service.Report;
 import com.junia.hotel.service.ReportService;
 import com.junia.hotel.service.ReservationHistory;
 import com.junia.hotel.service.ReservationService;
 
 import java.io.PrintStream;
+import java.nio.file.Path;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -28,6 +32,8 @@ public class ConsoleMenu {
     private final AvailabilityService availabilityService;
     private final ReportService reportService;
     private final ReservationHistory history;
+    private final ReportExporter reportExporter;
+    private final Clock clock;
     private final ConsoleInput input;
     private final PrintStream out;
 
@@ -35,12 +41,16 @@ public class ConsoleMenu {
                        AvailabilityService availabilityService,
                        ReportService reportService,
                        ReservationHistory history,
+                       ReportExporter reportExporter,
+                       Clock clock,
                        ConsoleInput input,
                        PrintStream out) {
         this.reservationService = reservationService;
         this.availabilityService = availabilityService;
         this.reportService = reportService;
         this.history = history;
+        this.reportExporter = reportExporter;
+        this.clock = clock;
         this.input = input;
         this.out = out;
     }
@@ -57,6 +67,8 @@ public class ConsoleMenu {
                 handle(choice.get());
             } catch (BookingException e) {
                 out.println("  Operation refused: " + e.getMessage());
+            } catch (DataExportException e) {
+                out.println("  Cannot export report: " + e.getMessage());
             } catch (IllegalArgumentException | IllegalStateException e) {
                 out.println("  Invalid request: " + e.getMessage());
             }
@@ -74,10 +86,11 @@ public class ConsoleMenu {
         out.println("6. List all reservations");
         out.println("7. Reports");
         out.println("8. Show history");
+        out.println("9. Export report to CSV");
         out.println("0. Quit");
     }
 
-    private void handle(int choice) throws BookingException {
+    private void handle(int choice) throws BookingException, DataExportException {
         switch (choice) {
             case 1 -> searchRooms();
             case 2 -> quote();
@@ -87,6 +100,7 @@ public class ConsoleMenu {
             case 6 -> reservationService.findAll().forEach(r -> out.println("  " + r));
             case 7 -> reports();
             case 8 -> showHistory();
+            case 9 -> exportReport();
             default -> out.println("  Unknown option.");
         }
     }
@@ -146,12 +160,28 @@ public class ConsoleMenu {
     }
 
     private void reports() {
-        out.printf("  Total revenue: %.2f EUR%n", reportService.totalRevenue());
-        Map<RoomType, Double> byType = reportService.revenueByRoomType();
-        byType.forEach((type, revenue) -> out.printf("    %-8s %.2f EUR%n", type, revenue));
-        reportService.bestCustomer().ifPresent(guest -> out.println("  Best customer: " + guest));
         Optional<DateRange> period = readStay();
-        period.ifPresent(p -> out.printf("  Occupancy %s: %.1f%%%n", p, reportService.occupancyRate(p) * 100));
+        if (period.isEmpty()) {
+            return;
+        }
+        Report report = reportService.buildReport(period.get());
+        out.printf("  Total revenue (all active reservations): %.2f EUR%n", report.totalRevenue());
+        for (RoomType type : RoomType.values()) {
+            out.printf("    %-8s %.2f EUR%n", type, report.revenueByRoomType().getOrDefault(type, 0.0));
+        }
+        out.println("  Best customer (all active reservations): " + report.bestCustomerName());
+        out.printf("  Occupancy %s: %.1f%%%n", report.period(), report.occupancyRate() * 100);
+    }
+
+    private void exportReport() throws DataExportException {
+        Optional<DateRange> period = readStay();
+        if (period.isEmpty()) {
+            return;
+        }
+        Report report = reportService.buildReport(period.get());
+        Path target = Path.of("reports", "report-" + LocalDate.now(clock) + ".csv");
+        reportExporter.export(report, target);
+        out.println("  Report exported to " + target);
     }
 
     private void showHistory() {

@@ -23,6 +23,15 @@ public class ReportService {
         this.reservations = reservations;
     }
 
+    /** Retains the console report's scope: global revenue, occupancy within the given period. */
+    public Report buildReport(DateRange period) {
+        if (period == null) {
+            throw new IllegalArgumentException("Report period is required");
+        }
+        return new Report(period, revenueByRoomType(), totalRevenue(), occupancyRate(period),
+                bestCustomer().map(Guest::getName).orElse("None"));
+    }
+
     /** Booked room-nights divided by available room-nights over the period (0.0 to 1.0). */
     public double occupancyRate(DateRange period) {
         long availableRoomNights = rooms.count() * period.nights();
