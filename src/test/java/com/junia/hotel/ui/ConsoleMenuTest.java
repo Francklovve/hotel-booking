@@ -1,11 +1,13 @@
-package com.junia.hotel.service;
+package com.junia.hotel.ui;
 
+import com.junia.hotel.HotelFixture;
 import com.junia.hotel.exception.BookingException;
 import com.junia.hotel.exception.DataExportException;
 import com.junia.hotel.io.ReportExporter;
+import com.junia.hotel.model.Reservation;
 import com.junia.hotel.model.room.RoomType;
-import com.junia.hotel.ui.ConsoleInput;
-import com.junia.hotel.ui.ConsoleMenu;
+import com.junia.hotel.service.Report;
+import com.junia.hotel.service.ReservationHistory;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -23,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class ReportMenuTest {
+class ConsoleMenuTest {
 
     @Test
     void exportOptionBuildsTheRequestedReportAndUsesTheInjectedDate() throws BookingException {
@@ -68,6 +70,28 @@ class ReportMenuTest {
         assertEquals(0, exporter.calls);
         assertNull(exporter.report);
         assertNull(exporter.target);
+        assertTrue(output.contains("Goodbye!"));
+    }
+
+    @Test
+    void cancellationDisplaysTheFeeAndTheRefund() throws BookingException {
+        HotelFixture hotel = new HotelFixture();
+        Reservation reservation = hotel.reservationService.book("G003", "102", stay("2026-12-10", "2026-12-12"), 2);
+
+        String output = runMenu(hotel, new CapturingExporter(), "4\n" + reservation.getId() + "\n0\n");
+
+        assertTrue(output.contains("Cancellation fee: 0.00 EUR | Refund: 160.00 EUR"));
+    }
+
+    @Test
+    void refusedCancellationIsExplainedAndTheMenuContinues() throws BookingException {
+        HotelFixture hotel = new HotelFixture();
+        Reservation reservation = hotel.reservationService.importExisting(
+                "G003", "102", stay("2026-11-20", "2026-11-22"), 1);
+
+        String output = runMenu(hotel, new CapturingExporter(), "4\n" + reservation.getId() + "\n0\n");
+
+        assertTrue(output.contains("Operation refused: Reservation " + reservation.getId() + " cannot be cancelled"));
         assertTrue(output.contains("Goodbye!"));
     }
 

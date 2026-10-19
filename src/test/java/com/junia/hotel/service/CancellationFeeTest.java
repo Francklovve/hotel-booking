@@ -1,6 +1,8 @@
 package com.junia.hotel.service;
 
+import com.junia.hotel.HotelFixture;
 import com.junia.hotel.exception.BookingException;
+import com.junia.hotel.exception.CancellationNotAllowedException;
 import com.junia.hotel.exception.ReservationNotFoundException;
 import com.junia.hotel.model.DateRange;
 import com.junia.hotel.model.Reservation;
@@ -127,6 +129,39 @@ class CancellationFeeTest {
     void cancellingAnUnknownReservationStillReportsTheMissingId() {
         assertThrows(ReservationNotFoundException.class,
                 () -> hotel.reservationService.cancel("R9999"));
+    }
+
+    @Test
+    void cancellationOnTheCheckInDayIsStillAllowedWithTheLateFee() throws BookingException {
+        Reservation reservation = hotel.reservationService.book("G003", "102", stay("2026-12-01", "2026-12-03"), 1);
+
+        CancellationResult result = hotel.reservationService.cancel(reservation.getId());
+
+        assertEquals(80.0, result.fee(), 0.001);
+        assertEquals(80.0, result.refund(), 0.001);
+    }
+
+    @Test
+    void stayAlreadyStartedCannotBeCancelled() throws BookingException {
+        Reservation reservation = hotel.reservationService.importExisting(
+                "G003", "102", stay("2026-11-30", "2026-12-03"), 1);
+
+        assertThrows(CancellationNotAllowedException.class,
+                () -> hotel.reservationService.cancel(reservation.getId()));
+        assertEquals(ReservationStatus.CONFIRMED, reservation.getStatus());
+    }
+
+    @Test
+    void finishedStayCannotBeCancelledAndKeepsItsRevenue() throws BookingException {
+        Reservation reservation = hotel.reservationService.importExisting(
+                "G003", "102", stay("2026-11-20", "2026-11-22"), 1);
+
+        CancellationNotAllowedException exception = assertThrows(CancellationNotAllowedException.class,
+                () -> hotel.reservationService.cancel(reservation.getId()));
+
+        assertEquals("Reservation " + reservation.getId()
+                + " cannot be cancelled: the stay started on 2026-11-20", exception.getMessage());
+        assertEquals(160.0, hotel.reportService.totalRevenue(), 0.001);
     }
 
     @Test

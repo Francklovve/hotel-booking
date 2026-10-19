@@ -23,7 +23,7 @@ public class ReportService {
         this.reservations = reservations;
     }
 
-    /** Retains the console report's scope: global revenue, occupancy within the given period. */
+    /** Revenue and best customer cover all active reservations; occupancy covers the given period only. */
     public Report buildReport(DateRange period) {
         if (period == null) {
             throw new IllegalArgumentException("Report period is required");

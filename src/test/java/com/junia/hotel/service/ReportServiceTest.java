@@ -1,5 +1,6 @@
 package com.junia.hotel.service;
 
+import com.junia.hotel.HotelFixture;
 import com.junia.hotel.exception.BookingException;
 import com.junia.hotel.model.Reservation;
 import com.junia.hotel.model.room.RoomType;

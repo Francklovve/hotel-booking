@@ -1,6 +1,7 @@
 package com.junia.hotel.service;
 
 import com.junia.hotel.exception.BookingException;
+import com.junia.hotel.exception.CancellationNotAllowedException;
 import com.junia.hotel.exception.CapacityExceededException;
 import com.junia.hotel.exception.GuestNotFoundException;
 import com.junia.hotel.exception.InvalidDateRangeException;
@@ -34,17 +35,6 @@ public class ReservationService {
     // Injected instead of calling LocalDate.now() directly so tests can fix "today".
     private final Clock clock;
     private final List<ReservationListener> listeners = new ArrayList<>();
-
-    public ReservationService(Repository<Room, String> rooms,
-                              Repository<Guest, String> guests,
-                              Repository<Reservation, String> reservations,
-                              AvailabilityService availabilityService,
-                              PricingService pricingService,
-                              Clock clock) {
-        // Retains the original constructor for callers using the default hotel policies.
-        this(rooms, guests, reservations, availabilityService, pricingService,
-                new CancellationPolicyResolver(), clock);
-    }
 
     public ReservationService(Repository<Room, String> rooms,
                               Repository<Guest, String> guests,
@@ -93,11 +83,20 @@ public class ReservationService {
         return pricingService.quote(room, guest, stay, guestCount);
     }
 
-    public CancellationResult cancel(String reservationId) throws ReservationNotFoundException {
+    /**
+     * Cancels a reservation that has not started yet; the check-in day itself is still allowed
+     * (late cancellation, charged by the policy). The fee is computed on the frozen final price.
+     */
+    public CancellationResult cancel(String reservationId)
+            throws ReservationNotFoundException, CancellationNotAllowedException {
         Reservation reservation = reservations.findById(reservationId)
                 .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+        LocalDate today = LocalDate.now(clock);
+        if (today.isAfter(reservation.getStay().checkIn())) {
+            throw new CancellationNotAllowedException(reservationId, reservation.getStay().checkIn());
+        }
         CancellationPolicy policy = cancellationPolicyResolver.resolve(reservation.getRoom().getType());
-        double rate = policy.feeRate(reservation.getStay(), LocalDate.now(clock));
+        double rate = policy.feeRate(reservation.getStay(), today);
         double fee = Math.round(reservation.getTotalPrice() * rate * 100) / 100.0;
         double refund = Math.round((reservation.getTotalPrice() - fee) * 100) / 100.0;
         reservation.cancel();

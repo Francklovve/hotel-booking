@@ -13,7 +13,7 @@ exported to CSV.
 
 ## 2. How to run
 
-Requirements: JDK 21 or newer (developed with JDK 26, compiled with `--release 21`).
+Requirements: JDK 17 or newer (the project is compiled with `--release 17`).
 The Maven Wrapper downloads and uses Maven 3.9.11; no separate Maven installation is needed.
 Set `JAVA_HOME` to your JDK directory. The first run needs an internet connection.
 
@@ -38,7 +38,7 @@ The data folder must contain `rooms.csv`, `guests.csv` and `reservations.csv`.
 | 1 | Search available rooms | capacity, overlap with active reservations, sorted by price |
 | 2 | Price quote | per-night pricing of each room type + best discount |
 | 3 | Book a room | guest/room must exist, no past check-in, capacity, no overlap |
-| 4 | Cancel a reservation | type-specific fee/refund, cannot cancel twice, the room becomes free again |
+| 4 | Cancel a reservation | type-specific fee/refund, not after check-in day, cannot cancel twice, the room becomes free again |
 | 5 / 6 | List reservations | per guest / all |
 | 7 | Reports | active revenue per room type, best customer, occupancy rate on a period |
 | 8 | Show history | successful user bookings/cancellations in chronological order |
@@ -46,7 +46,9 @@ The data folder must contain `rooms.csv`, `guests.csv` and `reservations.csv`.
 
 Cancellation fees use the final price frozen at booking, including its discount, and are rounded to cents:
 STANDARD and FAMILY are flexible (free at least 2 calendar days before check-in, 50% otherwise);
-SUITE is non-refundable (100% whatever the date). The menu displays the fee and refund.
+SUITE is non-refundable (100% whatever the date). A reservation can be cancelled until its check-in day
+(included); once the stay has started it is refused with `CancellationNotAllowedException`.
+The menu displays the fee and refund.
 
 Booking and cancellation trigger a simulated confirmation email on the console and an entry in the
 session history. Failed operations and startup imports do not trigger these events. History is kept
@@ -103,8 +105,8 @@ A class diagram is available in [docs/architecture.md](docs/architecture.md).
    and its subclasses (room unavailable, capacity exceeded, not found…) are expected situations the
    caller must handle (the menu explains them to the user). `InvalidDateRangeException` extends
    `IllegalArgumentException`: an invalid period is an input mistake to prevent by validation.
-   The original double-cancellation contract uses `IllegalStateException` for an invalid state
-   transition. Technical loading/export errors use separate checked exceptions and keep their cause.
+   Cancelling an already cancelled reservation is an invalid state transition (`IllegalStateException`).
+   Technical loading/export errors use separate checked exceptions and keep their cause.
 3. **Half-open date intervals.** A stay is `[checkIn, checkOut)`: the check-out day is not a night,
    so a guest can arrive on the day another one leaves. This makes overlap detection a one-liner.
 4. **One `Clock` injected into the service and menu.** Past check-in validation, cancellation fees and
@@ -156,6 +158,7 @@ copy of its revenue map; `ReservationHistory` similarly returns an unmodifiable 
 | `BookingException` | checked, abstract | base of business errors |
 | `RoomUnavailableException` | checked | the room is booked on overlapping dates |
 | `CapacityExceededException` | checked | too many guests for the room |
+| `CancellationNotAllowedException` | checked | the stay has already started or is over |
 | `RoomNotFoundException`, `GuestNotFoundException`, `ReservationNotFoundException` | checked | unknown id |
 | `InvalidDateRangeException` | unchecked (`IllegalArgumentException`) | check-out not after check-in, check-in in the past |
 | `DataLoadingException` | checked | missing or malformed data file (keeps the original cause) |
@@ -198,11 +201,11 @@ and reported. Imports do not notify reservation listeners or add session-history
 .\mvnw.cmd test
 ```
 
-The suite has **111 JUnit 5 tests**, including the original 67 tests, unchanged. Tests cover normal
-cases, boundaries (adjacent stays, exactly 7 nights, full capacity, check-in today, cancellation exactly
-2 days before arrival) and failures (overlap, capacity, unknown ids, invalid files, repeated cancellation).
+The suite has **116 JUnit 5 tests**. They cover normal cases, boundaries (adjacent stays, exactly
+7 nights, full capacity, check-in today, cancellation exactly 2 days before arrival or on the check-in day)
+and failures (overlap, capacity, unknown ids, invalid files, repeated cancellation, stay already started).
 Fake listeners verify events and silent imports; `@TempDir` tests verify CSV contents, directory creation
-and invalid paths with the original cause. Menu tests use a fake exporter and a fixed `Clock`.
+and invalid paths with the original cause. Console menu tests use a fake exporter and a fixed `Clock`.
 
 To rebuild the executable JAR and run the bundled demo data:
 

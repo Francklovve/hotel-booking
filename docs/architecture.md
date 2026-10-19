@@ -93,6 +93,7 @@ classDiagram
     BookingException <|-- RoomUnavailableException
     BookingException <|-- CapacityExceededException
     BookingException <|-- RoomNotFoundException
+    BookingException <|-- CancellationNotAllowedException
 ```
 
 ## Application flow
@@ -102,7 +103,8 @@ classDiagram
 2. `DataImportService` loads rooms, guests, then existing reservations from the CSV files.
 3. Each existing reservation is checked by `ReservationService` (conflicts, capacity); invalid ones are reported.
 4. `ConsoleMenu` lets the user search, quote, book, cancel, view history and see/export reports.
-5. A successful user booking/cancellation notifies the observers after the state change. Imports and
+5. A cancellation is refused once the stay has started. A successful user booking/cancellation
+   notifies the observers after the state change. Imports and
    refused operations are silent. Cancellation selects its policy through the resolver and returns
    a `CancellationResult` with the fee and refund of the frozen final price.
 6. `ReportService` builds a `Report` snapshot: global active revenue/best customer and occupancy
