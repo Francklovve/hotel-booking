@@ -11,17 +11,21 @@ room-type-specific pricing, discount rules, capacity checks and occupancy statis
 
 ## 2. How to run
 
-Requirements: JDK 21 or newer (developed with JDK 26, compiled with `--release 21`), Maven 3.9+
-(IntelliJ IDEA ships with Maven, no separate installation needed).
+Requirements: JDK 21 or newer (developed with JDK 26, compiled with `--release 21`).
+The Maven Wrapper downloads and uses Maven 3.9.11; no separate Maven installation is needed.
+Set `JAVA_HOME` to your JDK directory. The first run needs an internet connection.
 
 From IntelliJ: open the folder (it detects `pom.xml`), then run `com.junia.hotel.Application`.
 
-From a terminal:
+From PowerShell on Windows:
 
-```bash
-mvn compile exec:java                      # uses the data bundled in src/main/resources/data
-mvn package && java -jar target/hotel-booking-1.0.0.jar path/to/other/data/folder
+```powershell
+.\mvnw.cmd compile exec:java              # uses the data bundled in src/main/resources/data
+.\mvnw.cmd package
+java -jar target/hotel-booking-1.0.0.jar path/to/other/data/folder
 ```
+
+On Linux or macOS, use `./mvnw` instead of `.\mvnw.cmd`.
 
 The data folder must contain `rooms.csv`, `guests.csv` and `reservations.csv`.
 
@@ -145,8 +149,8 @@ and reported.
 
 ## 12. Tests
 
-```bash
-mvn test
+```powershell
+.\mvnw.cmd test
 ```
 
 JUnit 5 tests cover normal cases, edge cases (adjacent stays, exactly 7 nights, full capacity,
