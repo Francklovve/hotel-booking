@@ -5,7 +5,7 @@ import com.junia.hotel.model.Reservation;
 import java.util.ArrayList;
 import java.util.List;
 
-/** The insertion order records the order in which successful operations occurred. */
+/** Garde les opérations réussies dans leur ordre d'arrivée. */
 public class ReservationHistory implements ReservationListener {
 
     private final List<String> events = new ArrayList<>();

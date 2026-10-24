@@ -13,8 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Reads simple CSV files (no quoted fields). Skips the header, blank lines and "#" comments.
- * Files are read from a directory if one is given, otherwise from the classpath (src/main/resources).
+ * Lit les CSV sans champs entre guillemets et ignore l'en-tête, les lignes vides et les commentaires.
+ * Utilise le dossier fourni, ou les ressources du projet par défaut.
  */
 class CsvFileReader {
 
@@ -41,7 +41,7 @@ class CsvFileReader {
                     headerSkipped = true;
                     continue;
                 }
-                // -1 keeps trailing empty columns, e.g. "101,STANDARD,2,80,"
+                // Le -1 garde la dernière colonne vide, comme dans "101,STANDARD,2,80,".
                 String[] fields = line.split(",", -1);
                 if (fields.length < expectedColumns) {
                     throw new DataLoadingException(fileName + " line " + lineNumber + ": expected "

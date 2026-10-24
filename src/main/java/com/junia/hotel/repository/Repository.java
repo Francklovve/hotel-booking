@@ -4,11 +4,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Storage abstraction. Services depend on this interface, not on a concrete storage
- * (Dependency Inversion): an in-memory map today, a file or a database tomorrow.
+ * Accès aux objets stockés.
  *
- * @param <T>  stored type
- * @param <ID> identifier type
+ * @param <T> type d'objet
+ * @param <ID> type d'identifiant
  */
 public interface Repository<T, ID> {
 

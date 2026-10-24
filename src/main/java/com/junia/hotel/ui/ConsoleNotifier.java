@@ -5,7 +5,7 @@ import com.junia.hotel.service.ReservationListener;
 
 import java.io.PrintStream;
 
-/** Simulates confirmation emails using the console; no real email is sent. */
+/** Affiche une confirmation pour simuler un e-mail, sans en envoyer. */
 public class ConsoleNotifier implements ReservationListener {
 
     private final PrintStream out;

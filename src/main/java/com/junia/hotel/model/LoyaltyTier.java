@@ -1,6 +1,6 @@
 package com.junia.hotel.model;
 
-/** Loyalty level of a guest; each level grants a discount rate on bookings. */
+/** Niveaux de fidélité et remise associée. */
 public enum LoyaltyTier {
     STANDARD(0.0),
     SILVER(0.05),

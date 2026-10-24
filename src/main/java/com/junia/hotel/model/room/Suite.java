@@ -3,10 +3,7 @@ package com.junia.hotel.model.room;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 
-/**
- * Premium room: Friday and Saturday nights are more expensive,
- * and breakfast can be included (charged per guest).
- */
+/** Majoration le vendredi et le samedi, avec un petit-déjeuner facturé par personne si l'option est activée. */
 public class Suite extends Room {
 
     static final double WEEKEND_SURCHARGE_RATE = 0.25;

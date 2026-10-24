@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/** Keeps CSV formatting and filesystem errors outside the reporting service. */
+/** Écrit les rapports en CSV et signale les erreurs de fichier. */
 public class CsvReportExporter implements ReportExporter {
 
     @Override
@@ -30,7 +30,7 @@ public class CsvReportExporter implements ReportExporter {
         }
         lines.add(String.format(Locale.ROOT, "total_revenue,%.2f", report.totalRevenue()));
         lines.add(String.format(Locale.ROOT, "occupancy_rate,%.4f", report.occupancyRate()));
-        // Quoting protects names containing commas, quotes or line breaks.
+        // Protège les noms qui contiennent des virgules, des guillemets ou des retours à la ligne.
         lines.add("best_customer,\"" + report.bestCustomerName().replace("\"", "\"\"") + "\"");
 
         try {

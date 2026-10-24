@@ -11,11 +11,7 @@ import com.junia.hotel.repository.Repository;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Fills the repositories from a data source at startup.
- * Existing reservations go through the ReservationService so that a conflicting
- * line in the file is refused exactly like a conflicting booking made by a user.
- */
+/** Charge les données au démarrage. Les réservations passent par le service pour vérifier la capacité et les conflits. */
 public class DataImportService {
 
     private final HotelDataSource dataSource;
@@ -48,7 +44,7 @@ public class DataImportService {
                         record.stay(), record.guestCount());
                 imported++;
             } catch (BookingException e) {
-                // One bad booking must not prevent the hotel from starting: report and continue.
+                // Signale la réservation refusée et poursuit l'import.
                 rejected.add("reservations.csv line " + record.lineNumber() + ": " + e.getMessage());
             }
         }

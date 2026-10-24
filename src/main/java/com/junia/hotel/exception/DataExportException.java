@@ -1,6 +1,6 @@
 package com.junia.hotel.exception;
 
-/** Technical export failure; the original cause remains available for diagnosis. */
+/** Erreur d'export, avec la cause d'origine. */
 public class DataExportException extends Exception {
 
     public DataExportException(String message, Throwable cause) {

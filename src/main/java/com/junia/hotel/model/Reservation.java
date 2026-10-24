@@ -5,10 +5,7 @@ import com.junia.hotel.pricing.PriceQuote;
 
 import java.util.Objects;
 
-/**
- * A booking of one room by one guest for a period.
- * The price is frozen at booking time (the quote), so later price changes do not affect it.
- */
+/** Réservation d'une chambre pour un client. Le prix du devis est gardé au moment de la réservation. */
 public class Reservation {
 
     private final String id;
@@ -32,7 +29,7 @@ public class Reservation {
         this.status = ReservationStatus.CONFIRMED;
     }
 
-    /** Only a confirmed reservation can be cancelled; cancelling twice is a caller mistake. */
+    /** Seule une réservation confirmée peut être annulée. */
     public void cancel() {
         if (status == ReservationStatus.CANCELLED) {
             throw new IllegalStateException("Reservation " + id + " is already cancelled");
@@ -44,7 +41,7 @@ public class Reservation {
         return status == ReservationStatus.CONFIRMED;
     }
 
-    /** True when this active reservation blocks the given room for the given period. */
+    /** Indique si cette réservation bloque la chambre pendant la période demandée. */
     public boolean blocks(Room otherRoom, DateRange period) {
         return isActive() && room.equals(otherRoom) && stay.overlaps(period);
     }

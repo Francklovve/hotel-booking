@@ -22,10 +22,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * User interaction only: reads choices, calls the services, displays results.
- * Business errors are caught here, at the application boundary, and shown to the user.
- */
+/** Lit les choix, appelle les services et affiche les résultats ou les erreurs. */
 public class ConsoleMenu {
 
     private final ReservationService reservationService;
@@ -198,7 +195,7 @@ public class ConsoleMenu {
         if (checkIn.isEmpty() || checkOut.isEmpty()) {
             return Optional.empty();
         }
-        // May throw InvalidDateRangeException, caught in run()
+        // Une période invalide est traitée dans run().
         return Optional.of(new DateRange(checkIn.get(), checkOut.get()));
     }
 }

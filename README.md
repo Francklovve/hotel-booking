@@ -1,217 +1,199 @@
-# Hotel Booking System
+# Hotel Booking
 
-Final project — Object-Oriented Programming in Java (JUNIA M1).
+Ce projet permet de gérer les réservations d'un petit hôtel depuis un menu en console.
+On peut chercher une chambre libre, vérifier le prix d'un séjour, réserver, annuler
+et consulter les chiffres de l'hôtel.
 
-## 1. Purpose
+C'est un projet de programmation orientée objet en Java, réalisé dans le cadre du M1 à JUNIA.
+Les données de départ viennent de fichiers CSV. Les changements restent en mémoire :
+ils sont perdus quand on ferme le programme.
 
-A console application that manages the rooms of a small hotel: searching free rooms,
-quoting a price, booking, cancelling, and producing management reports.
-The business logic is the heart of the project: **conflict detection between reservations,
-room-type-specific pricing, discount rules, capacity checks, cancellation fees and occupancy statistics**.
-Successful user operations also produce confirmation messages and a session history; reports can be
-exported to CSV.
+## Lancer le projet
 
-## 2. How to run
+Il faut un JDK 17 ou plus récent et une variable `JAVA_HOME` qui pointe vers ce JDK.
+Le Maven Wrapper fourni télécharge Maven 3.9.11 au premier lancement.
+Il faut donc une connexion Internet pour cette première étape.
 
-Requirements: JDK 17 or newer (the project is compiled with `--release 17`).
-The Maven Wrapper downloads and uses Maven 3.9.11; no separate Maven installation is needed.
-Set `JAVA_HOME` to your JDK directory. The first run needs an internet connection.
-
-From IntelliJ: open the folder (it detects `pom.xml`), then run `com.junia.hotel.Application`.
-
-From PowerShell on Windows:
+Depuis PowerShell, à la racine du projet :
 
 ```powershell
-.\mvnw.cmd compile exec:java              # uses the data bundled in src/main/resources/data
+.\mvnw.cmd compile exec:java
+```
+
+On peut aussi créer le JAR puis le lancer :
+
+```powershell
 .\mvnw.cmd package
-java -jar target/hotel-booking-1.0.0.jar path/to/other/data/folder
+java -jar target/hotel-booking-1.0.0.jar
 ```
 
-On Linux or macOS, use `./mvnw` instead of `.\mvnw.cmd`.
+Sur Linux ou macOS, utiliser `./mvnw` à la place de `.\mvnw.cmd`.
+Dans IntelliJ, ouvrir le dossier comme projet Maven, puis lancer
+`com.junia.hotel.Application`.
 
-The data folder must contain `rooms.csv`, `guests.csv` and `reservations.csv`.
+Par défaut, le programme utilise les fichiers de `src/main/resources/data`.
+Pour choisir un autre dossier :
 
-## 3. Main features
-
-| Menu | Feature | Business rules involved |
-|---|---|---|
-| 1 | Search available rooms | capacity, overlap with active reservations, sorted by price |
-| 2 | Price quote | per-night pricing of each room type + best discount |
-| 3 | Book a room | guest/room must exist, no past check-in, capacity, no overlap |
-| 4 | Cancel a reservation | type-specific fee/refund, not after check-in day, cannot cancel twice, the room becomes free again |
-| 5 / 6 | List reservations | per guest / all |
-| 7 | Reports | active revenue per room type, best customer, occupancy rate on a period |
-| 8 | Show history | successful user bookings/cancellations in chronological order |
-| 9 | Export report to CSV | same indicators as option 7, UTF-8 file, parent directory created automatically |
-
-Cancellation fees use the final price frozen at booking, including its discount, and are rounded to cents:
-STANDARD and FAMILY are flexible (free at least 2 calendar days before check-in, 50% otherwise);
-SUITE is non-refundable (100% whatever the date). A reservation can be cancelled until its check-in day
-(included); once the stay has started it is refused with `CancellationNotAllowedException`.
-The menu displays the fee and refund.
-
-Booking and cancellation trigger a simulated confirmation email on the console and an entry in the
-session history. Failed operations and startup imports do not trigger these events. History is kept
-in memory and exposed as an unmodifiable snapshot.
-
-Reports include revenue and the best customer across **all active reservations**; only occupancy is
-limited to the selected half-open period. Cancelled reservations are excluded, including their fees:
-this is a booking report, not a payment ledger. Option 9 writes `reports/report-<date>.csv` in the
-current working directory. A second export on the same day replaces that file. The CSV has `metric,value`
-columns, one row per room type (including zeros), total revenue, occupancy as a fraction from 0 to 1,
-and the best customer name (`None` if empty). Decimal points and quoted names make the output
-independent of the computer's language. Generated reports are ignored by Git.
-
-At startup the existing reservations of `reservations.csv` go through the same rules as a new booking:
-the demo file contains one conflicting line which is **rejected and reported** without stopping the application.
-
-## 4. Main classes
-
-```
-com.junia.hotel
-├── Application              composition root: creates and wires every object
-├── model                    domain objects
-│   ├── DateRange            immutable period, nights, overlap detection
-│   ├── Guest, LoyaltyTier   customer and its loyalty level (enum with discount rate)
-│   ├── Reservation          booking with its frozen price and status
-│   └── room
-│       ├── Room             abstract base of every room
-│       ├── StandardRoom, Suite, FamilyRoom
-│       ├── RoomType         enum
-│       └── RoomFactory      creates the right subclass from a type
-├── pricing                  DiscountPolicy (interface), LoyaltyDiscount, LongStayDiscount,
-│                            PricingService, PriceQuote, CancellationPolicy (interface),
-│                            FlexibleCancellationPolicy, NonRefundablePolicy, CancellationPolicyResolver
-├── repository               Repository<T, ID> (generic interface), InMemoryRepository
-├── service                  ReservationService, CancellationResult, AvailabilityService,
-│                            ReservationListener (interface), ReservationHistory,
-│                            ReportService, Report, DataImportService
-├── io                       HotelDataSource (interface), CsvHotelDataSource, ReservationRecord,
-│                            ReportExporter (interface), CsvReportExporter
-├── exception                custom exceptions
-└── ui                       ConsoleMenu, ConsoleInput, ConsoleNotifier
+```powershell
+java -jar target/hotel-booking-1.0.0.jar chemin/vers/les/donnees
 ```
 
-A class diagram is available in [docs/architecture.md](docs/architecture.md).
+Ce dossier doit contenir `rooms.csv`, `guests.csv` et `reservations.csv`.
 
-## 5. Technical decisions
+## Utiliser le menu
 
-1. **Room is an abstract class, policies are interfaces.** Every room *is a* room and shares
-   state (number, capacity, base price) and behaviour (`priceForStay`, `canAccommodate`): that is a
-   shared foundation, so an abstract class. A discount is a *capability* with no shared state and many
-   unrelated implementations: an interface. `CancellationPolicy` follows the same Strategy pattern;
-   its type mapping belongs to a separate resolver so `Room` keeps one responsibility.
-2. **Checked exceptions for business errors, unchecked for invalid arguments.** `BookingException`
-   and its subclasses (room unavailable, capacity exceeded, not found…) are expected situations the
-   caller must handle (the menu explains them to the user). `InvalidDateRangeException` extends
-   `IllegalArgumentException`: an invalid period is an input mistake to prevent by validation.
-   Cancelling an already cancelled reservation is an invalid state transition (`IllegalStateException`).
-   Technical loading/export errors use separate checked exceptions and keep their cause.
-3. **Half-open date intervals.** A stay is `[checkIn, checkOut)`: the check-out day is not a night,
-   so a guest can arrive on the day another one leaves. This makes overlap detection a one-liner.
-4. **One `Clock` injected into the service and menu.** Past check-in validation, cancellation fees and
-   the export filename depend on today's date; injecting a `Clock` makes them testable with a fixed date.
-5. **Discounts do not stack.** Only the most advantageous one is applied (`max` on a stream), which is
-   a common hotel rule and keeps prices explainable (`PriceQuote` records which discount was used).
+Le menu est en anglais. Les dates se saisissent au format `YYYY-MM-DD`.
 
-## 6. Inheritance
+| Option | Ce qu'elle permet de faire |
+|---|---|
+| 1 | Chercher les chambres libres pour des dates et un nombre de personnes |
+| 2 | Obtenir un devis avec la remise appliquée |
+| 3 | Réserver une chambre pour un client existant |
+| 4 | Annuler une réservation et voir les frais et le remboursement |
+| 5 | Voir les réservations d'un client |
+| 6 | Voir toutes les réservations |
+| 7 | Consulter les revenus, le meilleur client et le taux d'occupation |
+| 8 | Voir les réservations et les annulations de la session |
+| 9 | Exporter un rapport en CSV |
+| 0 | Quitter |
 
-`StandardRoom`, `Suite` and `FamilyRoom` extend the abstract class `Room`. Each subclass adds its own
-attribute (`breakfastIncluded`, `extraGuestFee`) and its own pricing rule. Custom exceptions also
-form a hierarchy: `RoomUnavailableException`, `CapacityExceededException`, … extend `BookingException`.
+Pour essayer un devis avec les données fournies, utiliser le client `G003`, la chambre `102`,
+deux personnes et un séjour du `2026-12-14` au `2026-12-16`. Le total est de 160 EUR.
+Pour réserver, il faut aussi que la date d'arrivée ne soit pas passée.
+Les données de démonstration couvrent décembre 2026 et janvier 2027.
 
-## 7. Polymorphism
+## Les règles de réservation
 
-- `Room.priceForStay()` (a *template method*) calls the abstract `priceForNight()`: the code that sums
-  the nights is written once, the executed pricing depends on the actual object
-  (standard: flat price; suite: +25 % on Friday/Saturday and optional breakfast; family room: fee per
-  extra guest). See `RoomPricingTest.sameStayHasDifferentPricesDependingOnTheActualRoomType`.
-- `PricingService` manipulates a `List<DiscountPolicy>` without knowing the concrete discounts.
-- `ReservationService` calls `CancellationPolicy.feeRate()` on the strategy selected by an `EnumMap`
-  in `CancellationPolicyResolver`; STANDARD/FAMILY share the flexible strategy, SUITE uses the other.
-- **Observer:** `ReservationService` calls a `List<ReservationListener>` after successful changes.
-  `ConsoleNotifier` and `ReservationHistory` implement the same interface. Observers can subscribe
-  and unsubscribe; a listener is registered at most once.
-- Services work with `Repository<T, ID>` and `HotelDataSource` references. The menu receives a
-  `ReportExporter`; `ReportService` produces a `Report` snapshot without depending on CSV or files.
+Le client et la chambre doivent exister. La chambre doit être assez grande pour le groupe
+et libre pendant tout le séjour. Les résultats d'une recherche sont triés par prix de base par nuit.
 
-## 8. Abstract class and interfaces
+Le jour du départ ne compte pas comme une nuit. Du 10 au 12 décembre, on paie donc deux nuits.
+Un autre client peut arriver le 12 dans la même chambre sans créer de conflit.
 
-| Abstraction | Kind | Why |
-|---|---|---|
-| `Room` | abstract class | shared state + shared behaviour, a generic room cannot exist |
-| `DiscountPolicy` | interface | Strategy: interchangeable pricing rules |
-| `CancellationPolicy` | interface | Strategy: interchangeable cancellation fee rules |
-| `ReservationListener` | interface | Observer: booking/cancellation subscribers |
-| `ReportExporter` | interface | export contract independent of the file format |
-| `Repository<T, ID>` | generic interface | storage abstraction used by the services |
-| `HotelDataSource` | interface | the origin of the data (CSV today) can change |
-| `BookingException` | abstract class | common type to catch every business error at once |
+| Chambre | Prix par nuit |
+|---|---|
+| `STANDARD` | Prix de base, quel que soit le jour |
+| `SUITE` | Prix de base, majoré de 25 % le vendredi et le samedi ; si le petit-déjeuner est activé, ajout de 15 EUR par personne |
+| `FAMILY` | Prix de base pour deux personnes, puis un supplément par personne supplémentaire |
 
-`CancellationResult` and `Report` are records that carry operation results. `Report` makes a defensive
-copy of its revenue map; `ReservationHistory` similarly returns an unmodifiable list snapshot.
+Les clients `SILVER` ont 5 % de remise et les clients `GOLD` ont 10 %.
+Un séjour d'au moins sept nuits donne droit à 15 %. Les remises ne s'ajoutent pas :
+le programme garde la plus avantageuse. Le prix final est conservé dans la réservation,
+même si les tarifs changent ensuite.
 
-## 9. Custom exceptions
+### Annuler un séjour
 
-| Exception | Type | Thrown when |
-|---|---|---|
-| `BookingException` | checked, abstract | base of business errors |
-| `RoomUnavailableException` | checked | the room is booked on overlapping dates |
-| `CapacityExceededException` | checked | too many guests for the room |
-| `CancellationNotAllowedException` | checked | the stay has already started or is over |
-| `RoomNotFoundException`, `GuestNotFoundException`, `ReservationNotFoundException` | checked | unknown id |
-| `InvalidDateRangeException` | unchecked (`IllegalArgumentException`) | check-out not after check-in, check-in in the past |
-| `DataLoadingException` | checked | missing or malformed data file (keeps the original cause) |
-| `DataExportException` | checked | report cannot be written or its parent directory created (keeps the `IOException`) |
+L'annulation reste possible le jour de l'arrivée. Après cette date, elle est refusée.
+On ne peut pas annuler deux fois la même réservation.
 
-Standard exceptions are also used where they fit: `IllegalArgumentException` (invalid constructor
-arguments), `IllegalStateException` (cancelling a cancelled reservation), `IOException`,
-`NumberFormatException`, `DateTimeParseException` (wrapped with the file name and line number).
+| Chambre | Frais d'annulation |
+|---|---|
+| `STANDARD` ou `FAMILY` | Aucun frais au moins deux jours calendaires avant l'arrivée ; 50 % sinon |
+| `SUITE` | 100 % du prix, quelle que soit la date |
 
-## 10. Data loading
+Les frais sont calculés sur le prix final, remise comprise, et arrondis au centime.
+Le menu affiche les frais et le remboursement. La chambre annulée redevient disponible.
 
-`Application` → `DataImportService.importAll()` → `HotelDataSource` (implemented by `CsvHotelDataSource`).
-Files are read with try-with-resources from the classpath (`src/main/resources/data`) or from a directory
-given as first program argument. Header, blank lines and lines starting with `#` are ignored.
-Rooms are created by `RoomFactory` according to the `type` column. A malformed line stops the startup
-with a clear message (`rooms.csv line 4: …`); a reservation violating a business rule is only rejected
-and reported. Imports do not notify reservation listeners or add session-history entries.
+Une réservation ou une annulation réussie ajoute une entrée à l'historique de session
+et affiche une confirmation qui simule un e-mail. Aucun vrai e-mail n'est envoyé.
+Les opérations refusées et les imports au démarrage ne créent pas ces notifications.
 
-## 11. SOLID
+## Les fichiers CSV et les rapports
 
-- **S** — each class has one reason to change: `CsvHotelDataSource` (file format), `PricingService`
-  (pricing), `AvailabilityService` (conflicts), `CancellationPolicyResolver` (type/policy mapping),
-  `ReportService` (indicators), `CsvReportExporter` (CSV/files), `ConsoleMenu` (interaction), `Application` (wiring).
-- **O** — a new discount is a new `DiscountPolicy` class, a new room type a new `Room` subclass:
-  `PricingService` and `Room.priceForStay` do not change (test
-  `newDiscountCanBeAddedWithoutChangingThePricingService`). New observers implement
-  `ReservationListener` and subscribe without changing booking logic; a new export format implements
-  `ReportExporter` without changing report calculations.
-- **L** — every `Room` subclass honours the contract of `Room` (no subclass throws on a normal operation),
-  so all services handle rooms without `instanceof`.
-- **I** — interfaces are small and focused (policies and listeners have two methods, `ReportExporter`
-  has one, `HotelDataSource` only loads).
-- **D** — services depend on `Repository` and `HotelDataSource` abstractions received through their
-  constructor; `DataImportServiceTest` replaces the CSV source by a fake one. The cancellation resolver,
-  shared `Clock`, and menu's `ReportExporter` are also injected. Observer callbacks use only their interface.
+Les fichiers d'entrée utilisent des champs séparés par des virgules, sans champs entre guillemets.
+Le lecteur ignore l'en-tête, les lignes vides et celles qui commencent par `#`.
 
-## 12. Tests
+| Fichier | Colonnes |
+|---|---|
+| `rooms.csv` | `number,type,capacity,basePrice,option` |
+| `guests.csv` | `id,name,email,loyaltyTier` |
+| `reservations.csv` | `guestId,roomNumber,checkIn,checkOut,guestCount` |
+
+Dans `rooms.csv`, `option` reste vide pour une chambre standard.
+Pour une suite, elle vaut `true` ou `false` pour le petit-déjeuner.
+Pour une chambre familiale, elle indique le supplément par personne et par nuit.
+
+Une ligne mal formée arrête le chargement avec le nom du fichier et le numéro de ligne.
+Une réservation bien formée mais impossible est signalée, puis le chargement continue.
+La dernière réservation du fichier fourni chevauche volontairement la première dans la chambre `201` :
+elle est rejetée au démarrage. L'import accepte les séjours passés, mais vérifie toujours
+la capacité et les conflits.
+
+Les rapports donnent les revenus totaux, les revenus par type de chambre et le meilleur client
+sur toutes les réservations actives. Seul le taux d'occupation dépend de la période saisie.
+Les réservations annulées et leurs frais sont exclus : le rapport décrit les réservations,
+il ne suit pas les encaissements.
+
+L'option 9 crée `reports/report-<date>.csv`. Un nouvel export le même jour remplace ce fichier.
+Le CSV est en UTF-8 avec les colonnes `metric,value`. Il contient aussi les types de chambre
+sans revenu, le taux d'occupation entre 0 et 1 et le meilleur client (`None` s'il n'y en a pas).
+Les nombres utilisent un point décimal et les noms sont protégés par des guillemets.
+Le dossier est créé si besoin et les rapports générés sont ignorés par Git.
+
+## Organisation du code
+
+| Partie | Rôle |
+|---|---|
+| `Application` | Crée les objets, les relie et lance le menu |
+| `model` | Représente les clients, les chambres, les séjours et les réservations |
+| `pricing` | Calcule les prix, les remises et les frais d'annulation |
+| `repository` | Stocke les objets en mémoire et permet de les retrouver par identifiant |
+| `service` | Gère les réservations, les disponibilités, les imports, l'historique et les rapports |
+| `io` | Lit les fichiers CSV et exporte les rapports |
+| `exception` | Regroupe les erreurs à traiter |
+| `ui` | Lit les saisies et affiche les résultats |
+
+Les liens entre les principales classes sont dans [docs/architecture.md](docs/architecture.md).
+
+### Les choix de conception
+
+`Room` est abstraite, car toutes les chambres ont un numéro, une capacité et un prix de base.
+`StandardRoom`, `Suite` et `FamilyRoom` en héritent et calculent chacune le prix d'une nuit.
+`Room.priceForStay()` additionne ces nuits sans tester le type de chambre :
+c'est le polymorphisme utilisé dans le calcul du prix.
+
+Les remises passent par `DiscountPolicy`. On peut donc ajouter une remise sans modifier
+`PricingService`. Les frais d'annulation suivent le même principe avec `CancellationPolicy`.
+`CancellationPolicyResolver` choisit la règle selon le type de chambre.
+Pour ajouter un type de chambre, il faut aussi mettre à jour `RoomType`, `RoomFactory`
+et cette correspondance.
+
+`ReservationListener` prévient `ConsoleNotifier` et `ReservationHistory` après une opération réussie.
+C'est le principe Observer : le service prévient ses abonnés sans gérer lui-même leur affichage
+ou leur historique. Un abonné peut être ajouté ou retiré, sans doublon.
+
+Les dépendances sont reçues par constructeur. Par exemple, l'import utilise `HotelDataSource`
+et le menu utilise `ReportExporter`. Les tests peuvent leur fournir une fausse source
+ou un exporteur de test. Un même `Clock` est transmis au service et au menu pour contrôler
+la date des réservations, des annulations et des exports.
+
+Les principes SOLID se retrouvent dans ces choix : chaque partie a un rôle précis,
+les remises et les exporteurs passent par des interfaces courtes, les trois types de chambre
+respectent le contrat de `Room`, et les services utilisent des abstractions pour le stockage
+et la source des données.
+
+Les erreurs métier héritent de `BookingException`, une exception contrôlée interceptée par le menu.
+Cela couvre par exemple une chambre occupée, une capacité dépassée ou un identifiant inconnu.
+Une période invalide déclenche `InvalidDateRangeException`, qui hérite de `IllegalArgumentException`.
+Une double annulation déclenche `IllegalStateException`. Les erreurs de lecture et d'export
+passent par `DataLoadingException` et `DataExportException`, en conservant leur cause d'origine.
+
+Enfin, `Report` copie sa table de revenus et `ReservationHistory` renvoie une liste non modifiable.
+On peut consulter ces résultats sans modifier leurs collections depuis l'extérieur.
+
+## Vérifier le projet
 
 ```powershell
 .\mvnw.cmd test
 ```
 
-The suite has **116 JUnit 5 tests**. They cover normal cases, boundaries (adjacent stays, exactly
-7 nights, full capacity, check-in today, cancellation exactly 2 days before arrival or on the check-in day)
-and failures (overlap, capacity, unknown ids, invalid files, repeated cancellation, stay already started).
-Fake listeners verify events and silent imports; `@TempDir` tests verify CSV contents, directory creation
-and invalid paths with the original cause. Console menu tests use a fake exporter and a fixed `Clock`.
+Les 116 tests JUnit 5 couvrent les prix, les remises, les conflits, la capacité, les annulations,
+les notifications, les fichiers et les rapports. Ils vérifient aussi les limites : deux séjours
+qui se suivent, exactement sept nuits, une annulation deux jours avant l'arrivée ou le jour même.
+Les tests du menu utilisent des saisies préparées et une date fixe.
 
-To rebuild the executable JAR and run the bundled demo data:
+Pour repartir d'une compilation propre et recréer le JAR :
 
 ```powershell
 .\mvnw.cmd clean package
-java -jar target/hotel-booking-1.0.0.jar
 ```
-
-Use option 0 to quit. The application stores bookings and history in memory for the current session.

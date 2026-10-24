@@ -23,7 +23,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Booking and cancellation workflow: validates business rules, then records the reservation. */
+/** Vérifie les règles, puis enregistre les réservations et les annulations. */
 public class ReservationService {
 
     private final Repository<Room, String> rooms;
@@ -32,7 +32,7 @@ public class ReservationService {
     private final AvailabilityService availabilityService;
     private final PricingService pricingService;
     private final CancellationPolicyResolver cancellationPolicyResolver;
-    // Injected instead of calling LocalDate.now() directly so tests can fix "today".
+    // L'horloge permet de fixer la date du jour dans les tests.
     private final Clock clock;
     private final List<ReservationListener> listeners = new ArrayList<>();
 
@@ -52,24 +52,21 @@ public class ReservationService {
         this.clock = clock;
     }
 
-    /** New booking made today: a stay cannot start in the past. */
+    /** Crée une réservation dont l'arrivée n'est pas dans le passé. */
     public Reservation book(String guestId, String roomNumber, DateRange stay, int guestCount)
             throws BookingException {
         if (stay.checkIn().isBefore(LocalDate.now(clock))) {
             throw new InvalidDateRangeException("Check-in date " + stay.checkIn() + " is in the past");
         }
         Reservation reservation = createReservation(guestId, roomNumber, stay, guestCount);
-        // A snapshot lets an observer unsubscribe during its callback.
+        // La copie permet à un abonné de se désinscrire pendant sa notification.
         for (ReservationListener listener : List.copyOf(listeners)) {
             listener.onBooked(reservation);
         }
         return reservation;
     }
 
-    /**
-     * Existing booking loaded from the data file: it may be in the past (history),
-     * but it must still respect capacity and must not overlap another booking.
-     */
+    /** Importe aussi les séjours passés, en vérifiant la capacité et les conflits. */
     public Reservation importExisting(String guestId, String roomNumber, DateRange stay, int guestCount)
             throws BookingException {
         return createReservation(guestId, roomNumber, stay, guestCount);
@@ -83,10 +80,7 @@ public class ReservationService {
         return pricingService.quote(room, guest, stay, guestCount);
     }
 
-    /**
-     * Cancels a reservation that has not started yet; the check-in day itself is still allowed
-     * (late cancellation, charged by the policy). The fee is computed on the frozen final price.
-     */
+    /** Accepte l'annulation jusqu'au jour d'arrivée inclus. Les frais utilisent le prix final de la réservation. */
     public CancellationResult cancel(String reservationId)
             throws ReservationNotFoundException, CancellationNotAllowedException {
         Reservation reservation = reservations.findById(reservationId)
@@ -162,7 +156,7 @@ public class ReservationService {
     }
 
     private String nextId() {
-        // Reservations are never deleted (only cancelled), so the count gives unique ids.
+        // Les réservations sont annulées mais jamais supprimées : le compteur suffit pour créer un nouvel id.
         return String.format("R%04d", reservations.count() + 1);
     }
 }

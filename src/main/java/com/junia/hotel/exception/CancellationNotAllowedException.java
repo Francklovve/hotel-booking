@@ -2,7 +2,7 @@ package com.junia.hotel.exception;
 
 import java.time.LocalDate;
 
-/** A stay that has already started (or is over) can no longer be cancelled. */
+/** L'annulation est refusée après le jour d'arrivée. */
 public class CancellationNotAllowedException extends BookingException {
 
     public CancellationNotAllowedException(String reservationId, LocalDate checkIn) {

@@ -8,10 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Computes the price of a stay. Business rule: discounts do not stack,
- * only the most advantageous one is applied.
- */
+/** Calcule le prix du séjour en gardant la meilleure remise, sans les cumuler. */
 public class PricingService {
 
     private final List<DiscountPolicy> discountPolicies;
