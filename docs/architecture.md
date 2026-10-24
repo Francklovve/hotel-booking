@@ -1,23 +1,36 @@
-# Architecture
+# Organisation du projet
+
+Le menu appelle les services, les services appliquent les règles, et les données restent
+dans des dépôts en mémoire. La lecture et l'écriture des CSV sont regroupées dans `io`.
+
+## Les chambres et les prix
+
+Toutes les chambres partagent les informations de `Room`. Chaque sous-classe définit
+le prix d'une nuit ; `priceForStay()` additionne ensuite les nuits du séjour.
+Les remises sont calculées à part et seule la meilleure est retenue.
 
 ```mermaid
 classDiagram
+    direction TB
     class Room {
         <<abstract>>
         -String number
         -int capacity
         -double basePricePerNight
-        +getType() RoomType*
-        #priceForNight(LocalDate, int) double*
+        +getType() RoomType
+        #priceForNight(LocalDate, int) double
         +priceForStay(DateRange, int) double
         +canAccommodate(int) boolean
     }
     Room <|-- StandardRoom
     Room <|-- Suite
     Room <|-- FamilyRoom
-    class Suite { -boolean breakfastIncluded }
-    class FamilyRoom { -double extraGuestFee }
-
+    class Suite {
+        -boolean breakfastIncluded
+    }
+    class FamilyRoom {
+        -double extraGuestFee
+    }
     class DiscountPolicy {
         <<interface>>
         +name() String
@@ -26,7 +39,28 @@ classDiagram
     DiscountPolicy <|.. LoyaltyDiscount
     DiscountPolicy <|.. LongStayDiscount
     PricingService o-- DiscountPolicy
+    PricingService --> Room
+    PricingService --> PriceQuote
+```
 
+`Reservation` garde le client, la chambre, le séjour, le devis et son statut.
+Le prix du devis reste donc celui de la réservation, même si les tarifs changent plus tard.
+`DateRange` exclut le jour du départ : une arrivée le jour où un autre client part ne crée pas de conflit.
+
+## Créer ou annuler une réservation
+
+```mermaid
+classDiagram
+    direction TB
+    class Repository~T,ID~ {
+        <<interface>>
+    }
+    Repository <|.. InMemoryRepository
+    ReservationService --> Repository
+    ReservationService --> AvailabilityService
+    ReservationService --> PricingService
+    ReservationService --> CancellationPolicyResolver
+    CancellationPolicyResolver o-- CancellationPolicy
     class CancellationPolicy {
         <<interface>>
         +name() String
@@ -34,83 +68,67 @@ classDiagram
     }
     CancellationPolicy <|.. FlexibleCancellationPolicy
     CancellationPolicy <|.. NonRefundablePolicy
-    CancellationPolicyResolver o-- CancellationPolicy : EnumMap by RoomType
-    ReservationService --> CancellationPolicyResolver
-    class CancellationResult {
-        <<record>>
-        +Reservation reservation
-        +double fee
-        +double refund
-    }
     ReservationService --> CancellationResult
+```
 
+Pour réserver, `ReservationService` vérifie la date, le client, la chambre, la capacité
+et les disponibilités. Il calcule ensuite le prix et enregistre la réservation.
+
+Pour annuler, il vérifie que le jour d'arrivée n'est pas passé.
+`CancellationPolicyResolver` choisit la règle : flexible pour `STANDARD` et `FAMILY`,
+non remboursable pour `SUITE`. Les frais et le remboursement sont calculés sur le prix
+final conservé dans la réservation. Le résultat est renvoyé dans `CancellationResult`.
+
+Le service utilise un `Clock` reçu par constructeur. Les tests peuvent ainsi fixer
+la date du jour et vérifier les cas limites sans dépendre de la date réelle.
+
+## L'historique et les rapports
+
+```mermaid
+classDiagram
+    direction TB
     class ReservationListener {
         <<interface>>
         +onBooked(Reservation) void
         +onCancelled(Reservation) void
     }
+    ReservationService o-- ReservationListener
     ReservationListener <|.. ConsoleNotifier
     ReservationListener <|.. ReservationHistory
-    ReservationService o-- ReservationListener : subscribers
     ConsoleMenu --> ReservationHistory
-
-    class Report {
-        <<record>>
-        +DateRange period
-        +Map revenueByRoomType
-        +double totalRevenue
-        +double occupancyRate
-        +String bestCustomerName
-    }
+    ConsoleMenu --> ReportService
+    ReportService --> Report
+    ConsoleMenu --> ReportExporter
     class ReportExporter {
         <<interface>>
         +export(Report, Path) void
     }
     ReportExporter <|.. CsvReportExporter
-    ReportService --> Report : builds snapshot
-    ConsoleMenu --> ReportExporter
-    CsvReportExporter --> DataExportException
-
-    class Repository~T,ID~ { <<interface>> }
-    Repository <|.. InMemoryRepository
-
-    class HotelDataSource { <<interface>> }
-    HotelDataSource <|.. CsvHotelDataSource
-
-    Reservation --> Guest
-    Reservation --> Room
-    Reservation --> DateRange
-    Reservation --> PriceQuote
-
-    ReservationService --> Repository
-    ReservationService --> AvailabilityService
-    ReservationService --> PricingService
-    ReportService --> Repository
-    DataImportService --> HotelDataSource
-    DataImportService --> ReservationService
-    ConsoleMenu --> ReservationService
-    ConsoleMenu --> ReportService
-    BookingException <|-- RoomUnavailableException
-    BookingException <|-- CapacityExceededException
-    BookingException <|-- RoomNotFoundException
-    BookingException <|-- CancellationNotAllowedException
 ```
 
-## Application flow
+Après une réservation ou une annulation réussie, le service prévient ses abonnés.
+`ConsoleNotifier` affiche une confirmation et `ReservationHistory` garde la trace de l'opération.
+L'import et les opérations refusées ne déclenchent pas ces événements.
 
-1. `Application` creates repositories, pricing/cancellation rules and services (composition root),
-   injects one `Clock`, subscribes the console notifier/history, and supplies the CSV report exporter.
-2. `DataImportService` loads rooms, guests, then existing reservations from the CSV files.
-3. Each existing reservation is checked by `ReservationService` (conflicts, capacity); invalid ones are reported.
-4. `ConsoleMenu` lets the user search, quote, book, cancel, view history and see/export reports.
-5. A cancellation is refused once the stay has started. A successful user booking/cancellation
-   notifies the observers after the state change. Imports and
-   refused operations are silent. Cancellation selects its policy through the resolver and returns
-   a `CancellationResult` with the fee and refund of the frozen final price.
-6. `ReportService` builds a `Report` snapshot: global active revenue/best customer and occupancy
-   within the requested period. Cancelled reservations, including their fees, are excluded.
-7. `CsvReportExporter` creates parent directories and writes UTF-8 to `reports/report-<date>.csv`.
-   A repeated same-day export replaces the file. `DataExportException` preserves the `IOException`;
-   the menu displays the error and continues.
-8. Business errors (`BookingException`) are caught in the menu; invalid arguments/states have their
-   own messages. Technical loading errors at startup stop the app with a clear message.
+`ReportService` calcule les revenus et le meilleur client sur toutes les réservations actives.
+Il utilise la période demandée uniquement pour le taux d'occupation.
+Les réservations annulées et leurs frais n'entrent pas dans ces chiffres.
+Le résultat est un `Report`, dont la table de revenus ne peut pas être modifiée depuis l'extérieur.
+
+`CsvReportExporter` écrit ce résultat en UTF-8 dans `reports/report-<date>.csv`.
+Il crée le dossier si besoin et remplace le fichier lors d'un nouvel export le même jour.
+Si l'écriture échoue, le menu affiche l'erreur et reste utilisable.
+
+## Au démarrage
+
+`Application` crée les dépôts, les services et leurs dépendances, puis lance l'import
+avant d'ouvrir le menu. `DataImportService` passe par `HotelDataSource`, implémentée
+ici par `CsvHotelDataSource`.
+
+L'import charge les chambres, puis les clients, puis les réservations.
+Les anciennes réservations peuvent être dans le passé, mais elles doivent respecter
+la capacité et les disponibilités. Une réservation impossible est signalée et ignorée.
+Une erreur de lecture ou de format arrête le démarrage avec le fichier et la ligne concernés.
+
+Pendant l'utilisation, le menu intercepte les `BookingException` et explique le refus.
+Il traite aussi les arguments invalides, les doubles annulations et les erreurs d'export.

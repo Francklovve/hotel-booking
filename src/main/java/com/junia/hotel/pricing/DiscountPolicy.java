@@ -3,14 +3,11 @@ package com.junia.hotel.pricing;
 import com.junia.hotel.model.DateRange;
 import com.junia.hotel.model.Guest;
 
-/**
- * Strategy: one interchangeable discount rule.
- * Adding a new promotion means adding a class, not editing the pricing service (Open/Closed).
- */
+/** Règle de remise utilisée par le calcul du prix. */
 public interface DiscountPolicy {
 
     String name();
 
-    /** Rate between 0 (no discount) and 1, for this guest and this stay. */
+    /** Remise entre 0 et 1 pour ce client et ce séjour. */
     double discountRate(Guest guest, DateRange stay);
 }

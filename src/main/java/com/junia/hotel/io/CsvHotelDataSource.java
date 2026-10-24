@@ -14,10 +14,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Turns CSV lines into domain objects. Any malformed line stops the loading with the
- * file name and line number, because starting with half of the rooms would be misleading.
- */
+/** Convertit les lignes CSV en objets. En cas d'erreur, indique le fichier et la ligne concernés. */
 public class CsvHotelDataSource implements HotelDataSource {
 
     public static final String ROOMS_FILE = "rooms.csv";
@@ -26,12 +23,12 @@ public class CsvHotelDataSource implements HotelDataSource {
 
     private final CsvFileReader reader;
 
-    /** Reads the files bundled in src/main/resources/data. */
+    /** Charge les fichiers fournis dans src/main/resources/data. */
     public CsvHotelDataSource() {
         this(null);
     }
 
-    /** Reads the files from the given directory. */
+    /** Charge les fichiers du dossier indiqué. */
     public CsvHotelDataSource(Path directory) {
         this.reader = new CsvFileReader(directory);
     }
@@ -49,7 +46,7 @@ public class CsvHotelDataSource implements HotelDataSource {
                         Double.parseDouble(line.field(3)),
                         line.field(4)));
             } catch (IllegalArgumentException e) {
-                // NumberFormatException and unknown enum constants are IllegalArgumentExceptions too
+                // Les erreurs de nombre et les valeurs inconnues d'une enum passent aussi ici.
                 throw invalidLine(line, e);
             }
         }

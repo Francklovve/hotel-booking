@@ -8,10 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
-/**
- * Generic map-based repository. LinkedHashMap keeps insertion order (file order)
- * while giving fast lookup by id.
- */
+/** Stockage par identifiant. LinkedHashMap conserve aussi l'ordre d'ajout des objets. */
 public class InMemoryRepository<T, ID> implements Repository<T, ID> {
 
     private final Map<ID, T> items = new LinkedHashMap<>();

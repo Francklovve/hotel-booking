@@ -4,7 +4,7 @@ import com.junia.hotel.model.DateRange;
 
 import java.time.LocalDate;
 
-/** Strategy for the fraction of a reservation's final price kept on cancellation. */
+/** Part du prix final à garder en cas d'annulation. */
 public interface CancellationPolicy {
 
     String name();

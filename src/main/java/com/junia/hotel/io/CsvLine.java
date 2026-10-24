@@ -1,6 +1,6 @@
 package com.junia.hotel.io;
 
-/** One data line of a CSV file, with its line number to produce helpful error messages. */
+/** Garde le numéro de ligne pour retrouver une erreur dans le CSV. */
 record CsvLine(String fileName, int lineNumber, String[] fields) {
 
     String field(int index) {

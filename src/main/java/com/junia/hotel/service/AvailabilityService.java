@@ -8,7 +8,7 @@ import com.junia.hotel.repository.Repository;
 import java.util.Comparator;
 import java.util.List;
 
-/** Answers "is this room free?" by detecting conflicts with active reservations. */
+/** Vérifie les conflits avec les réservations actives. */
 public class AvailabilityService {
 
     private final Repository<Room, String> rooms;
@@ -24,7 +24,7 @@ public class AvailabilityService {
                 .noneMatch(reservation -> reservation.blocks(room, stay));
     }
 
-    /** Rooms free for the whole stay and big enough, cheapest first. */
+    /** Chambres libres et assez grandes pour le séjour, triées par prix de base. */
     public List<Room> findAvailableRooms(DateRange stay, int guestCount) {
         return rooms.findAll().stream()
                 .filter(room -> room.canAccommodate(guestCount))

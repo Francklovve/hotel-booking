@@ -1,6 +1,6 @@
 package com.junia.hotel.exception;
 
-/** Technical error while reading the data files. Keeps the original cause (e.g. IOException). */
+/** Erreur de lecture des données, avec la cause d'origine. */
 public class DataLoadingException extends Exception {
 
     public DataLoadingException(String message) {

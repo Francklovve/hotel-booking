@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/** Management indicators computed from active reservations. */
+/** Calcule les chiffres de l'hôtel à partir des réservations actives. */
 public class ReportService {
 
     private final Repository<Room, String> rooms;
@@ -23,7 +23,7 @@ public class ReportService {
         this.reservations = reservations;
     }
 
-    /** Revenue and best customer cover all active reservations; occupancy covers the given period only. */
+    /** Les revenus et le meilleur client sont globaux ; seule l'occupation dépend de la période. */
     public Report buildReport(DateRange period) {
         if (period == null) {
             throw new IllegalArgumentException("Report period is required");
@@ -32,7 +32,7 @@ public class ReportService {
                 bestCustomer().map(Guest::getName).orElse("None"));
     }
 
-    /** Booked room-nights divided by available room-nights over the period (0.0 to 1.0). */
+    /** Nuits réservées divisées par les nuits disponibles sur la période, entre 0 et 1. */
     public double occupancyRate(DateRange period) {
         long availableRoomNights = rooms.count() * period.nights();
         if (availableRoomNights == 0) {
@@ -63,7 +63,7 @@ public class ReportService {
                 .sum();
     }
 
-    /** Guest who spent the most on active reservations, if any. */
+    /** Client qui a le plus dépensé sur ses réservations actives, s'il y en a un. */
     public Optional<Guest> bestCustomer() {
         return reservations.findAll().stream()
                 .filter(Reservation::isActive)

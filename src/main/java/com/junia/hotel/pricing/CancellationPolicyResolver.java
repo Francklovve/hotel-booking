@@ -5,7 +5,7 @@ import com.junia.hotel.model.room.RoomType;
 import java.util.EnumMap;
 import java.util.Map;
 
-/** Keeps cancellation rules outside Room, whose responsibility is room pricing and capacity. */
+/** Associe chaque type de chambre à sa règle d'annulation. */
 public class CancellationPolicyResolver {
 
     private final Map<RoomType, CancellationPolicy> policies = new EnumMap<>(RoomType.class);

@@ -7,10 +7,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-/**
- * Immutable period of a stay. The check-out day is excluded:
- * a stay from the 10th to the 12th is two nights (10th and 11th).
- */
+/** Période d'un séjour, sans le jour du départ : du 10 au 12, cela fait deux nuits. */
 public record DateRange(LocalDate checkIn, LocalDate checkOut) {
 
     public DateRange {
@@ -26,15 +23,12 @@ public record DateRange(LocalDate checkIn, LocalDate checkOut) {
         return ChronoUnit.DAYS.between(checkIn, checkOut);
     }
 
-    /** Each night of the stay, identified by the date the guest goes to sleep. */
+    /** Dates des nuits facturées, sans le jour du départ. */
     public Stream<LocalDate> nightDates() {
         return checkIn.datesUntil(checkOut);
     }
 
-    /**
-     * Half-open intervals: a guest leaving on the 12th does not conflict
-     * with a guest arriving on the 12th.
-     */
+    /** Un départ le 12 ne bloque pas une arrivée le 12. */
     public boolean overlaps(DateRange other) {
         return checkIn.isBefore(other.checkOut) && other.checkIn.isBefore(checkOut);
     }

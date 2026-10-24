@@ -1,9 +1,6 @@
 package com.junia.hotel.model.room;
 
-/**
- * Simple Factory: the only place that knows which concrete class matches a room type.
- * The "option" column of the data file has a type-specific meaning.
- */
+/** Crée la bonne chambre selon son type. La colonne option dépend de ce type. */
 public final class RoomFactory {
 
     private RoomFactory() {

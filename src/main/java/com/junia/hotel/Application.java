@@ -29,10 +29,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Scanner;
 
-/**
- * Composition root: the only place that chooses concrete implementations and wires them.
- * Usage: java -jar hotel-booking.jar [dataDirectory]
- */
+/** Point d'entrée : prépare les services, charge les données et lance le menu. */
 public class Application {
 
     public static void main(String[] args) {

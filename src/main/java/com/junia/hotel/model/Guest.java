@@ -2,7 +2,7 @@ package com.junia.hotel.model;
 
 import java.util.Objects;
 
-/** A hotel customer. Identified by its id: two guests with the same id are the same person. */
+/** Client de l'hôtel, identifié par son id. */
 public class Guest {
 
     private final String id;

@@ -2,7 +2,7 @@ package com.junia.hotel.model.room;
 
 import java.time.LocalDate;
 
-/** Simplest room: flat price, whatever the day or the number of guests. */
+/** Prix fixe par nuit, quel que soit le jour ou le nombre de personnes. */
 public class StandardRoom extends Room {
 
     public StandardRoom(String number, int capacity, double basePricePerNight) {

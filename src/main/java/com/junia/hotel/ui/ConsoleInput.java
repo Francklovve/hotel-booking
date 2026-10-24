@@ -6,7 +6,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Optional;
 import java.util.Scanner;
 
-/** Reads and validates user input, asking again until the value is valid. */
+/** Lit les saisies et redemande les nombres ou dates invalides. */
 public class ConsoleInput {
 
     private final Scanner scanner;
@@ -17,7 +17,7 @@ public class ConsoleInput {
         this.out = out;
     }
 
-    /** Empty when the input stream is closed (e.g. end of a piped script). */
+    /** Renvoie un Optional vide à la fin du flux d'entrée. */
     public Optional<String> readLine(String prompt) {
         out.print(prompt);
         if (!scanner.hasNextLine()) {

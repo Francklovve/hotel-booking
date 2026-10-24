@@ -2,7 +2,7 @@ package com.junia.hotel.model.room;
 
 import java.time.LocalDate;
 
-/** Large room: the base price covers two guests, each extra guest pays a fee per night. */
+/** Le prix de base couvre deux personnes. Chaque personne supplémentaire paie un supplément par nuit. */
 public class FamilyRoom extends Room {
 
     static final int GUESTS_INCLUDED = 2;

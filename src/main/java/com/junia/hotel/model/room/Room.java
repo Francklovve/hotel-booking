@@ -5,10 +5,7 @@ import com.junia.hotel.model.DateRange;
 import java.time.LocalDate;
 import java.util.Objects;
 
-/**
- * Common foundation of every room. Abstract because a "generic room" has no pricing rule:
- * each concrete room type decides how one night is priced.
- */
+/** Informations communes aux chambres. Chaque type de chambre définit le prix d'une nuit. */
 public abstract class Room {
 
     private final String number;
@@ -32,13 +29,10 @@ public abstract class Room {
 
     public abstract RoomType getType();
 
-    /** Price of a single night for the given number of guests. Varies with the room type. */
+    /** Prix d'une nuit pour le nombre de personnes indiqué. */
     protected abstract double priceForNight(LocalDate night, int guestCount);
 
-    /**
-     * Template method: the sum over nights is the same for every room,
-     * only the price of one night changes (polymorphic call).
-     */
+    /** Additionne les nuits en utilisant le calcul du type de chambre. */
     public final double priceForStay(DateRange stay, int guestCount) {
         if (guestCount <= 0) {
             throw new IllegalArgumentException("Guest count must be positive");
