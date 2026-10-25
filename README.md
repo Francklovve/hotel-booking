@@ -10,10 +10,9 @@ Bookings made during a session are kept in memory, so they are lost when the pro
 
 ## 2. How to run
 
-You need JDK 17 or newer. The project compiles for Java 17.
-The Maven Wrapper uses Maven 3.9.11, so there is no need to install Maven separately.
+You need JDK 17 or newer. The project uses Java 17 and Maven 3.9.11 through the Maven Wrapper,
+so there is no need to install Maven separately. Set `JAVA_HOME` to your JDK folder.
 The first run needs an internet connection to download Maven and the dependencies.
-Set `JAVA_HOME` to your JDK folder.
 
 From PowerShell, in the project folder:
 
@@ -51,8 +50,9 @@ can be in the past, but the other checks still apply. One booking in the demo fi
 another one: it is reported and skipped so the program can still start.
 
 STANDARD and FAMILY rooms have free cancellation at least two calendar days before check-in.
-Later cancellations cost 50%. SUITE rooms always cost 100% to cancel. Each reservation can be
-cancelled only once. Fees use the price saved at booking, after the discount, and are rounded to cents.
+Later cancellations cost 50%. SUITE rooms always cost 100% to cancel. Cancellation is allowed
+on the check-in day, but refused after that day or if the reservation is already cancelled.
+Fees use the price saved at booking, after the discount, and are rounded to cents.
 
 A successful booking or cancellation prints a simulated confirmation email and adds a history
 entry. Imports and failed operations do not add entries. The history lasts for the session.
@@ -72,7 +72,7 @@ occupancy as a value from 0 to 1, and the best customer's name (`None` if there 
 `Room`, `StandardRoom`, `Suite`, `FamilyRoom`, `RoomType` and `RoomFactory`.
 
 `ReservationService` handles bookings and cancellations. `AvailabilityService` checks free rooms,
-`PricingService` calculates prices, and `ReportService` calculates the report indicators. `ReservationHistory`
+`PricingService` calculates prices, and `ReportService` builds reports. `ReservationHistory`
 keeps the session's booking and cancellation events.
 
 Services use `Repository` to access stored objects; `InMemoryRepository` stores them in a map.
@@ -136,6 +136,7 @@ revenue map, and the history returns a list copy, so callers cannot change those
 | `BookingException` | Checked, abstract | Base type for business refusals |
 | `RoomUnavailableException` | Checked | Another reservation already occupies the room |
 | `CapacityExceededException` | Checked | Too many guests for the room |
+| `CancellationNotAllowedException` | Checked | Cancellation after the check-in day |
 | `RoomNotFoundException`, `GuestNotFoundException`, `ReservationNotFoundException` | Checked | The requested ID does not exist |
 | `InvalidDateRangeException` | Unchecked | Check-out is not after check-in, or a new stay starts in the past |
 | `DataLoadingException` | Checked | An input file is missing, unreadable or malformed |
@@ -177,6 +178,13 @@ checks without sending events to the listeners.
 .\mvnw.cmd test
 ```
 
-There are 111 JUnit 5 tests. They check bookings, pricing, cancellations, imports and reports,
-including boundary cases and refused requests. CSV export tests use `@TempDir`.
-Event tests use fake listeners.
+There are 116 JUnit 5 tests. They check bookings, pricing, cancellations, imports, reports and
+menu output, including boundary cases and refused requests. CSV export tests use `@TempDir`,
+and event tests use fake listeners.
+
+One console test expects decimal points. If your system uses decimal commas, pass the locale
+to the test JVM (the same option also works with `package`):
+
+```powershell
+.\mvnw.cmd test "-DargLine=-Duser.language=en -Duser.country=US"
+```

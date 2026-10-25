@@ -1,5 +1,6 @@
 package com.junia.hotel.service;
 
+import com.junia.hotel.HotelFixture;
 import com.junia.hotel.exception.DataLoadingException;
 import com.junia.hotel.io.HotelDataSource;
 import com.junia.hotel.io.ReservationRecord;

@@ -93,12 +93,13 @@ classDiagram
     BookingException <|-- RoomUnavailableException
     BookingException <|-- CapacityExceededException
     BookingException <|-- RoomNotFoundException
+    BookingException <|-- CancellationNotAllowedException
 ```
 
 ## Application flow
 
 1. `Application` creates the repositories and services and passes them their dependencies.
-   It supplies a `Clock` to the reservation service. The notifier and history are registered as listeners.
+   It shares one `Clock` between the reservation service and menu, and registers the notifier and history.
 2. `DataImportService` loads rooms, guests, then reservations. Imported stays can be in the past.
    `ReservationService` checks the guest, room, capacity and conflicts; refused bookings are reported and skipped.
 3. `ConsoleMenu` reads the user's choice and calls the service for that operation.
