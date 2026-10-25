@@ -22,6 +22,14 @@ public class ReportService {
         this.reservations = reservations;
     }
 
+    public Report buildReport(DateRange period) {
+        if (period == null) {
+            throw new IllegalArgumentException("Report period is required");
+        }
+        return new Report(period, revenueByRoomType(), totalRevenue(), occupancyRate(period),
+                bestCustomer().map(Guest::getName).orElse("None"));
+    }
+
     public double occupancyRate(DateRange period) {
         long availableRoomNights = rooms.count() * period.nights();
         if (availableRoomNights == 0) {

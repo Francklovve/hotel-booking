@@ -43,6 +43,7 @@ On Linux or macOS, use `./mvnw` instead of `.\mvnw.cmd`. Choose option 0 to quit
 | 5 / 6 | List one guest's reservations or all reservations |
 | 7 | Show revenue by room type, total revenue, occupancy and the best customer |
 | 8 | Show the session history |
+| 9 | Export a report to CSV |
 
 A new booking cannot start in the past. The guest and room must exist, the room must have enough
 space, and the dates must not overlap another active booking. At startup, imported reservations
@@ -57,7 +58,10 @@ A successful booking or cancellation prints a simulated confirmation email and a
 entry. Imports and failed operations do not add entries. The history lasts for the session.
 
 Revenue and the best customer are calculated from all active reservations. Only occupancy uses
-the period entered in the menu. Cancelled reservations are left out of the report.
+the period entered in the menu. Cancelled reservations and their fees are left out of the report.
+The export goes to `reports/report-<date>.csv`, in UTF-8. Exporting again on the same day replaces
+the file. It has `metric,value` columns with the period, each room type's revenue, the total,
+occupancy as a value from 0 to 1, and the best customer's name (`None` if there is no customer).
 
 ## 4. Main classes
 
@@ -73,6 +77,7 @@ keeps the session's booking and cancellation events.
 
 Services use `Repository` to access stored objects; `InMemoryRepository` stores them in a map.
 `DataImportService` loads the starting data through `HotelDataSource` and `CsvHotelDataSource`.
+`CsvReportExporter` writes the reports through the `ReportExporter` interface.
 
 The class diagram is in [docs/architecture.md](docs/architecture.md).
 
@@ -85,8 +90,8 @@ The class diagram is in [docs/architecture.md](docs/architecture.md).
    Cancelling twice uses `IllegalStateException`.
 3. **Exclude the check-out day.** A stay uses `[checkIn, checkOut)`, so one guest can leave on the
    day another arrives without creating a conflict.
-4. **Pass a `Clock` to `ReservationService`.** This lets tests set today's date when checking
-   whether a new booking starts in the past.
+4. **Pass a `Clock` to the service and menu.** This lets tests set today's date when checking
+   past bookings, cancellation fees and report filenames.
 5. **Apply one discount.** Discounts do not add up: the largest one is used. `PriceQuote` keeps
    its name and the final price, which is saved with the reservation.
 
@@ -120,9 +125,9 @@ can catch it while the concrete exceptions describe the reason for the refusal.
 `ReservationListener` uses Observer: `ConsoleNotifier` and `ReservationHistory` receive successful
 booking and cancellation events. Listeners can subscribe and unsubscribe, without duplicates.
 
-`Repository<T, ID>` covers storage and `HotelDataSource` covers loading.
-`CancellationResult` is a record containing the cancelled reservation, fee and refund.
-The history returns a list copy, so callers cannot change its entries.
+`Repository<T, ID>` covers storage, `HotelDataSource` covers loading, and `ReportExporter` covers
+exporting. `CancellationResult` and `Report` are records used for results. The report copies its
+revenue map, and the history returns a list copy, so callers cannot change those collections.
 
 ## 9. Custom exceptions
 
@@ -134,10 +139,12 @@ The history returns a list copy, so callers cannot change its entries.
 | `RoomNotFoundException`, `GuestNotFoundException`, `ReservationNotFoundException` | Checked | The requested ID does not exist |
 | `InvalidDateRangeException` | Unchecked | Check-out is not after check-in, or a new stay starts in the past |
 | `DataLoadingException` | Checked | An input file is missing, unreadable or malformed |
+| `DataExportException` | Checked | The report cannot be written or its directory cannot be created |
 
-The menu catches business errors and invalid requests and displays their messages.
-`DataLoadingException` keeps the original cause when one is available. A loading error stops
-startup. Cancelling an already cancelled reservation raises `IllegalStateException`.
+The menu catches business errors and invalid requests and displays their messages. Loading and
+export exceptions keep the original cause when one is available. A loading error stops startup;
+an export error returns to the menu. Cancelling an already cancelled reservation raises
+`IllegalStateException`.
 
 ## 10. Data loading
 
@@ -160,9 +167,9 @@ checks without sending events to the listeners.
 - **O:** A new discount implements `DiscountPolicy` without changing `PricingService`.
   A new listener implements `ReservationListener` and subscribes to the service.
 - **L:** Services use the same `Room` methods for standard rooms, suites and family rooms.
-- **I:** The interfaces have small roles: loading data or applying a rule.
+- **I:** The interfaces have small roles: loading data, exporting a report or applying a rule.
 - **D:** Services receive repositories and other dependencies through their constructors.
-  Tests can provide a fake `HotelDataSource` and a fixed `Clock`.
+  Tests can provide a fake `HotelDataSource` or `ReportExporter` and a fixed `Clock`.
 
 ## 12. Tests
 
@@ -170,6 +177,6 @@ checks without sending events to the listeners.
 .\mvnw.cmd test
 ```
 
-There are 96 JUnit 5 tests. They check bookings, pricing, cancellations, imports and reports,
-including boundary cases and refused requests.
+There are 111 JUnit 5 tests. They check bookings, pricing, cancellations, imports and reports,
+including boundary cases and refused requests. CSV export tests use `@TempDir`.
 Event tests use fake listeners.

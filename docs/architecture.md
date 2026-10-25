@@ -61,7 +61,9 @@ classDiagram
 4. After a successful booking or cancellation, `ReservationService` calls the listeners.
    `ConsoleNotifier` prints the confirmation and `ReservationHistory` adds an entry.
    Imports and failed operations do not call the listeners.
-5. `ReportService` calculates revenue and the best customer from all active reservations.
-   Occupancy uses the period entered in the menu.
-6. The menu shows business errors and invalid input, then accepts another choice.
-   A loading error at startup stops the program.
+5. `ReportService` builds the report from active reservations. Revenue and the best customer cover all
+   dates; occupancy uses the requested period. For export, the menu chooses `reports/report-<date>.csv`.
+   `CsvReportExporter` creates the directory and writes UTF-8, replacing an existing file at that path.
+6. The menu shows errors from bookings, invalid input and exports, then accepts another choice.
+   A loading error at startup stops the program. Loading and export exceptions preserve the original
+   cause when one is available.
