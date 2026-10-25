@@ -19,6 +19,7 @@ import com.junia.hotel.repository.Repository;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ReservationService {
@@ -30,6 +31,7 @@ public class ReservationService {
     private final PricingService pricingService;
     private final CancellationPolicyResolver cancellationPolicyResolver;
     private final Clock clock;
+    private final List<ReservationListener> listeners = new ArrayList<>();
 
     public ReservationService(Repository<Room, String> rooms,
                               Repository<Guest, String> guests,
@@ -62,7 +64,11 @@ public class ReservationService {
         if (stay.checkIn().isBefore(LocalDate.now(clock))) {
             throw new InvalidDateRangeException("Check-in date " + stay.checkIn() + " is in the past");
         }
-        return createReservation(guestId, roomNumber, stay, guestCount);
+        Reservation reservation = createReservation(guestId, roomNumber, stay, guestCount);
+        for (ReservationListener listener : List.copyOf(listeners)) {
+            listener.onBooked(reservation);
+        }
+        return reservation;
     }
 
     public Reservation importExisting(String guestId, String roomNumber, DateRange stay, int guestCount)
@@ -86,7 +92,23 @@ public class ReservationService {
         double fee = Math.round(reservation.getTotalPrice() * rate * 100) / 100.0;
         double refund = Math.round((reservation.getTotalPrice() - fee) * 100) / 100.0;
         reservation.cancel();
+        for (ReservationListener listener : List.copyOf(listeners)) {
+            listener.onCancelled(reservation);
+        }
         return new CancellationResult(reservation, fee, refund);
+    }
+
+    public void subscribe(ReservationListener listener) {
+        if (listener == null) {
+            throw new IllegalArgumentException("Reservation listener is required");
+        }
+        if (!listeners.contains(listener)) {
+            listeners.add(listener);
+        }
+    }
+
+    public void unsubscribe(ReservationListener listener) {
+        listeners.remove(listener);
     }
 
     public List<Reservation> findByGuest(String guestId) throws GuestNotFoundException {

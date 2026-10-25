@@ -9,6 +9,7 @@ import com.junia.hotel.pricing.PriceQuote;
 import com.junia.hotel.service.AvailabilityService;
 import com.junia.hotel.service.CancellationResult;
 import com.junia.hotel.service.ReportService;
+import com.junia.hotel.service.ReservationHistory;
 import com.junia.hotel.service.ReservationService;
 
 import java.io.PrintStream;
@@ -22,17 +23,20 @@ public class ConsoleMenu {
     private final ReservationService reservationService;
     private final AvailabilityService availabilityService;
     private final ReportService reportService;
+    private final ReservationHistory history;
     private final ConsoleInput input;
     private final PrintStream out;
 
     public ConsoleMenu(ReservationService reservationService,
                        AvailabilityService availabilityService,
                        ReportService reportService,
+                       ReservationHistory history,
                        ConsoleInput input,
                        PrintStream out) {
         this.reservationService = reservationService;
         this.availabilityService = availabilityService;
         this.reportService = reportService;
+        this.history = history;
         this.input = input;
         this.out = out;
     }
@@ -65,6 +69,7 @@ public class ConsoleMenu {
         out.println("5. List reservations of a guest");
         out.println("6. List all reservations");
         out.println("7. Reports");
+        out.println("8. Show history");
         out.println("0. Quit");
     }
 
@@ -77,6 +82,7 @@ public class ConsoleMenu {
             case 5 -> listGuestReservations();
             case 6 -> reservationService.findAll().forEach(r -> out.println("  " + r));
             case 7 -> reports();
+            case 8 -> showHistory();
             default -> out.println("  Unknown option.");
         }
     }
@@ -142,6 +148,14 @@ public class ConsoleMenu {
         reportService.bestCustomer().ifPresent(guest -> out.println("  Best customer: " + guest));
         Optional<DateRange> period = readStay();
         period.ifPresent(p -> out.printf("  Occupancy %s: %.1f%%%n", p, reportService.occupancyRate(p) * 100));
+    }
+
+    private void showHistory() {
+        List<String> events = history.getEvents();
+        if (events.isEmpty()) {
+            out.println("  No reservation events yet.");
+        }
+        events.forEach(event -> out.println("  " + event));
     }
 
     private Optional<DateRange> readStay() {

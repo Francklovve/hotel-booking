@@ -42,6 +42,7 @@ On Linux or macOS, use `./mvnw` instead of `.\mvnw.cmd`. Choose option 0 to quit
 | 4 | Cancel a reservation and show the fee and refund |
 | 5 / 6 | List one guest's reservations or all reservations |
 | 7 | Show revenue by room type, total revenue, occupancy and the best customer |
+| 8 | Show the session history |
 
 A new booking cannot start in the past. The guest and room must exist, the room must have enough
 space, and the dates must not overlap another active booking. At startup, imported reservations
@@ -51,6 +52,9 @@ another one: it is reported and skipped so the program can still start.
 STANDARD and FAMILY rooms have free cancellation at least two calendar days before check-in.
 Later cancellations cost 50%. SUITE rooms always cost 100% to cancel. Each reservation can be
 cancelled only once. Fees use the price saved at booking, after the discount, and are rounded to cents.
+
+A successful booking or cancellation prints a simulated confirmation email and adds a history
+entry. Imports and failed operations do not add entries. The history lasts for the session.
 
 Revenue and the best customer are calculated from all active reservations. Only occupancy uses
 the period entered in the menu. Cancelled reservations are left out of the report.
@@ -64,7 +68,8 @@ the period entered in the menu. Cancelled reservations are left out of the repor
 `Room`, `StandardRoom`, `Suite`, `FamilyRoom`, `RoomType` and `RoomFactory`.
 
 `ReservationService` handles bookings and cancellations. `AvailabilityService` checks free rooms,
-`PricingService` calculates prices, and `ReportService` calculates the report indicators.
+`PricingService` calculates prices, and `ReportService` calculates the report indicators. `ReservationHistory`
+keeps the session's booking and cancellation events.
 
 Services use `Repository` to access stored objects; `InMemoryRepository` stores them in a map.
 `DataImportService` loads the starting data through `HotelDataSource` and `CsvHotelDataSource`.
@@ -112,9 +117,12 @@ but each must provide its price for one night. `BookingException` is also abstra
 can catch it while the concrete exceptions describe the reason for the refusal.
 
 `DiscountPolicy` and `CancellationPolicy` use the Strategy pattern for the pricing rules.
+`ReservationListener` uses Observer: `ConsoleNotifier` and `ReservationHistory` receive successful
+booking and cancellation events. Listeners can subscribe and unsubscribe, without duplicates.
 
 `Repository<T, ID>` covers storage and `HotelDataSource` covers loading.
 `CancellationResult` is a record containing the cancelled reservation, fee and refund.
+The history returns a list copy, so callers cannot change its entries.
 
 ## 9. Custom exceptions
 
@@ -144,12 +152,13 @@ starting with `#` are skipped. In `rooms.csv`, the `option` column means breakfa
 
 A malformed row stops loading with its filename and line number. A reservation refused by a
 business rule is reported and skipped. `ReservationService.importExisting()` performs those
-checks before storing those reservations.
+checks without sending events to the listeners.
 
 ## 11. SOLID
 
 - **S:** CSV reading, pricing, availability, reports and menu input have separate classes.
 - **O:** A new discount implements `DiscountPolicy` without changing `PricingService`.
+  A new listener implements `ReservationListener` and subscribes to the service.
 - **L:** Services use the same `Room` methods for standard rooms, suites and family rooms.
 - **I:** The interfaces have small roles: loading data or applying a rule.
 - **D:** Services receive repositories and other dependencies through their constructors.
@@ -161,5 +170,6 @@ checks before storing those reservations.
 .\mvnw.cmd test
 ```
 
-There are 83 JUnit 5 tests. They check bookings, pricing, cancellations, imports and reports,
+There are 96 JUnit 5 tests. They check bookings, pricing, cancellations, imports and reports,
 including boundary cases and refused requests.
+Event tests use fake listeners.

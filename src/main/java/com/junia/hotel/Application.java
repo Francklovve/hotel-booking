@@ -16,9 +16,11 @@ import com.junia.hotel.service.AvailabilityService;
 import com.junia.hotel.service.DataImportService;
 import com.junia.hotel.service.ImportResult;
 import com.junia.hotel.service.ReportService;
+import com.junia.hotel.service.ReservationHistory;
 import com.junia.hotel.service.ReservationService;
 import com.junia.hotel.ui.ConsoleInput;
 import com.junia.hotel.ui.ConsoleMenu;
+import com.junia.hotel.ui.ConsoleNotifier;
 
 import java.nio.file.Path;
 import java.time.Clock;
@@ -43,6 +45,9 @@ public class Application {
         ReservationService reservationService = new ReservationService(rooms, guests, reservations,
                 availabilityService, pricingService, new CancellationPolicyResolver(), Clock.systemDefaultZone());
         ReportService reportService = new ReportService(rooms, reservations);
+        ReservationHistory history = new ReservationHistory();
+        reservationService.subscribe(new ConsoleNotifier(System.out));
+        reservationService.subscribe(history);
 
         try {
             ImportResult result = new DataImportService(dataSource, rooms, guests, reservationService).importAll();
@@ -57,7 +62,7 @@ public class Application {
 
         try (Scanner scanner = new Scanner(System.in)) {
             ConsoleInput input = new ConsoleInput(scanner, System.out);
-            new ConsoleMenu(reservationService, availabilityService, reportService, input, System.out).run();
+            new ConsoleMenu(reservationService, availabilityService, reportService, history, input, System.out).run();
         }
     }
 }
