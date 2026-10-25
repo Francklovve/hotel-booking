@@ -11,6 +11,8 @@ import com.junia.hotel.model.DateRange;
 import com.junia.hotel.model.Guest;
 import com.junia.hotel.model.Reservation;
 import com.junia.hotel.model.room.Room;
+import com.junia.hotel.pricing.CancellationPolicy;
+import com.junia.hotel.pricing.CancellationPolicyResolver;
 import com.junia.hotel.pricing.PriceQuote;
 import com.junia.hotel.pricing.PricingService;
 import com.junia.hotel.repository.Repository;
@@ -26,6 +28,7 @@ public class ReservationService {
     private final Repository<Reservation, String> reservations;
     private final AvailabilityService availabilityService;
     private final PricingService pricingService;
+    private final CancellationPolicyResolver cancellationPolicyResolver;
     private final Clock clock;
 
     public ReservationService(Repository<Room, String> rooms,
@@ -34,11 +37,23 @@ public class ReservationService {
                               AvailabilityService availabilityService,
                               PricingService pricingService,
                               Clock clock) {
+        this(rooms, guests, reservations, availabilityService, pricingService,
+                new CancellationPolicyResolver(), clock);
+    }
+
+    public ReservationService(Repository<Room, String> rooms,
+                              Repository<Guest, String> guests,
+                              Repository<Reservation, String> reservations,
+                              AvailabilityService availabilityService,
+                              PricingService pricingService,
+                              CancellationPolicyResolver cancellationPolicyResolver,
+                              Clock clock) {
         this.rooms = rooms;
         this.guests = guests;
         this.reservations = reservations;
         this.availabilityService = availabilityService;
         this.pricingService = pricingService;
+        this.cancellationPolicyResolver = cancellationPolicyResolver;
         this.clock = clock;
     }
 
@@ -63,11 +78,15 @@ public class ReservationService {
         return pricingService.quote(room, guest, stay, guestCount);
     }
 
-    public Reservation cancel(String reservationId) throws ReservationNotFoundException {
+    public CancellationResult cancel(String reservationId) throws ReservationNotFoundException {
         Reservation reservation = reservations.findById(reservationId)
                 .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+        CancellationPolicy policy = cancellationPolicyResolver.resolve(reservation.getRoom().getType());
+        double rate = policy.feeRate(reservation.getStay(), LocalDate.now(clock));
+        double fee = Math.round(reservation.getTotalPrice() * rate * 100) / 100.0;
+        double refund = Math.round((reservation.getTotalPrice() - fee) * 100) / 100.0;
         reservation.cancel();
-        return reservation;
+        return new CancellationResult(reservation, fee, refund);
     }
 
     public List<Reservation> findByGuest(String guestId) throws GuestNotFoundException {

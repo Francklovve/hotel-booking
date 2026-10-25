@@ -6,6 +6,7 @@ import com.junia.hotel.io.HotelDataSource;
 import com.junia.hotel.model.Guest;
 import com.junia.hotel.model.Reservation;
 import com.junia.hotel.model.room.Room;
+import com.junia.hotel.pricing.CancellationPolicyResolver;
 import com.junia.hotel.pricing.LongStayDiscount;
 import com.junia.hotel.pricing.LoyaltyDiscount;
 import com.junia.hotel.pricing.PricingService;
@@ -40,7 +41,7 @@ public class Application {
                 new LongStayDiscount(7, 0.15)));
         AvailabilityService availabilityService = new AvailabilityService(rooms, reservations);
         ReservationService reservationService = new ReservationService(rooms, guests, reservations,
-                availabilityService, pricingService, Clock.systemDefaultZone());
+                availabilityService, pricingService, new CancellationPolicyResolver(), Clock.systemDefaultZone());
         ReportService reportService = new ReportService(rooms, reservations);
 
         try {

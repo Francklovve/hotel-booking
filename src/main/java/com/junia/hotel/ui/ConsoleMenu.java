@@ -7,6 +7,7 @@ import com.junia.hotel.model.room.Room;
 import com.junia.hotel.model.room.RoomType;
 import com.junia.hotel.pricing.PriceQuote;
 import com.junia.hotel.service.AvailabilityService;
+import com.junia.hotel.service.CancellationResult;
 import com.junia.hotel.service.ReportService;
 import com.junia.hotel.service.ReservationService;
 
@@ -121,7 +122,9 @@ public class ConsoleMenu {
     private void cancel() throws BookingException {
         Optional<String> id = input.readLine("Reservation id: ");
         if (id.isPresent()) {
-            out.println("  Cancelled: " + reservationService.cancel(id.get()));
+            CancellationResult result = reservationService.cancel(id.get());
+            out.println("  Cancelled: " + result.reservation());
+            out.printf("  Cancellation fee: %.2f EUR | Refund: %.2f EUR%n", result.fee(), result.refund());
         }
     }
 

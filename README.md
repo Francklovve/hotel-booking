@@ -39,7 +39,7 @@ On Linux or macOS, use `./mvnw` instead of `.\mvnw.cmd`. Choose option 0 to quit
 | 1 | Find rooms that are free for the stay and large enough, sorted by price |
 | 2 | Calculate a price with the best available discount |
 | 3 | Book a room for an existing guest |
-| 4 | Cancel a reservation |
+| 4 | Cancel a reservation and show the fee and refund |
 | 5 / 6 | List one guest's reservations or all reservations |
 | 7 | Show revenue by room type, total revenue, occupancy and the best customer |
 
@@ -48,7 +48,9 @@ space, and the dates must not overlap another active booking. At startup, import
 can be in the past, but the other checks still apply. One booking in the demo file conflicts with
 another one: it is reported and skipped so the program can still start.
 
-A reservation can be cancelled only once. Cancelling frees the room for that stay.
+STANDARD and FAMILY rooms have free cancellation at least two calendar days before check-in.
+Later cancellations cost 50%. SUITE rooms always cost 100% to cancel. Each reservation can be
+cancelled only once. Fees use the price saved at booking, after the discount, and are rounded to cents.
 
 Revenue and the best customer are calculated from all active reservations. Only occupancy uses
 the period entered in the menu. Cancelled reservations are left out of the report.
@@ -71,8 +73,8 @@ The class diagram is in [docs/architecture.md](docs/architecture.md).
 
 ## 5. Technical decisions
 
-1. **Share room data in `Room`.** It holds the number, capacity and base price. Each room type
-   provides its own price for one night, while the calculation over the stay stays in `Room`.
+1. **Keep cancellation separate from room pricing.** `CancellationPolicyResolver` chooses the
+   policy for each `RoomType`, so `Room` only handles the room's price and capacity.
 2. **Use different exceptions for refusals and invalid input.** Business refusals extend
    `BookingException`. Invalid dates and arguments use `IllegalArgumentException` or a subclass.
    Cancelling twice uses `IllegalStateException`.
@@ -99,8 +101,9 @@ pattern. The call uses the actual room type: a standard room has a fixed price, 
 more on Friday and Saturday and can include breakfast, and a family room charges for extra guests.
 `RoomPricingTest.sameStayHasDifferentPricesDependingOnTheActualRoomType` checks this difference.
 
-`PricingService` uses `DiscountPolicy` references to compare discounts without checking
-which implementation it received.
+`PricingService` uses `DiscountPolicy` references to compare discounts. `ReservationService`
+uses a `CancellationPolicy` reference to calculate the fee. Both services can call the rules
+without checking which implementation they received.
 
 ## 8. Abstract class and interfaces
 
@@ -108,10 +111,10 @@ which implementation it received.
 but each must provide its price for one night. `BookingException` is also abstract: the menu
 can catch it while the concrete exceptions describe the reason for the refusal.
 
-`DiscountPolicy` uses the Strategy pattern to let the pricing service compare discount rules.
+`DiscountPolicy` and `CancellationPolicy` use the Strategy pattern for the pricing rules.
 
 `Repository<T, ID>` covers storage and `HotelDataSource` covers loading.
-`PriceQuote` is a record containing the calculated price and the chosen discount.
+`CancellationResult` is a record containing the cancelled reservation, fee and refund.
 
 ## 9. Custom exceptions
 
@@ -158,5 +161,5 @@ checks before storing those reservations.
 .\mvnw.cmd test
 ```
 
-There are 67 JUnit 5 tests. They check bookings, pricing, cancellations, imports and reports,
+There are 83 JUnit 5 tests. They check bookings, pricing, cancellations, imports and reports,
 including boundary cases and refused requests.
