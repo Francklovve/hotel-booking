@@ -1,0 +1,6 @@
+id,name,email,loyaltyTier
+G001,Alice Martin,alice.martin@mail.com,GOLD
+G002,Bob Durand,bob.durand@mail.com,SILVER
+G003,Chloe Bernard,chloe.bernard@mail.com,STANDARD
+G004,David Petit,david.petit@mail.com,STANDARD
+G005,Emma Leroy,emma.leroy@mail.com,GOLD

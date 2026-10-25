@@ -1,0 +1,8 @@
+number,type,capacity,basePrice,option
+101,STANDARD,1,65,
+102,STANDARD,2,80,
+103,STANDARD,2,85,
+201,SUITE,2,200,true
+202,SUITE,3,240,false
+301,FAMILY,4,120,25
+302,FAMILY,5,140,20
