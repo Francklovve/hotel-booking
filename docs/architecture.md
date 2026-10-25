@@ -27,6 +27,50 @@ classDiagram
     DiscountPolicy <|.. LongStayDiscount
     PricingService o-- DiscountPolicy
 
+    class CancellationPolicy {
+        <<interface>>
+        +name() String
+        +feeRate(DateRange, LocalDate) double
+    }
+    CancellationPolicy <|.. FlexibleCancellationPolicy
+    CancellationPolicy <|.. NonRefundablePolicy
+    CancellationPolicyResolver o-- CancellationPolicy : EnumMap by RoomType
+    ReservationService --> CancellationPolicyResolver
+    class CancellationResult {
+        <<record>>
+        +Reservation reservation
+        +double fee
+        +double refund
+    }
+    ReservationService --> CancellationResult
+
+    class ReservationListener {
+        <<interface>>
+        +onBooked(Reservation) void
+        +onCancelled(Reservation) void
+    }
+    ReservationListener <|.. ConsoleNotifier
+    ReservationListener <|.. ReservationHistory
+    ReservationService o-- ReservationListener : subscribers
+    ConsoleMenu --> ReservationHistory
+
+    class Report {
+        <<record>>
+        +DateRange period
+        +Map revenueByRoomType
+        +double totalRevenue
+        +double occupancyRate
+        +String bestCustomerName
+    }
+    class ReportExporter {
+        <<interface>>
+        +export(Report, Path) void
+    }
+    ReportExporter <|.. CsvReportExporter
+    ReportService --> Report : builds
+    ConsoleMenu --> ReportExporter
+    CsvReportExporter --> DataExportException
+
     class Repository~T,ID~ { <<interface>> }
     Repository <|.. InMemoryRepository
 
