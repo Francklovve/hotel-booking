@@ -10,7 +10,7 @@ Bookings made during a session are kept in memory, so they are lost when the pro
 
 ## 2. How to run
 
-You need JDK 21 or newer. The project compiles for Java 21.
+You need JDK 17 or newer. The project compiles for Java 17.
 The Maven Wrapper uses Maven 3.9.11, so there is no need to install Maven separately.
 The first run needs an internet connection to download Maven and the dependencies.
 Set `JAVA_HOME` to your JDK folder.
