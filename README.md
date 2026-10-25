@@ -11,13 +11,14 @@ Bookings made during a session are kept in memory, so they are lost when the pro
 ## 2. How to run
 
 You need JDK 21 or newer. The project compiles for Java 21.
-Install Maven 3.9 or use the Maven installation bundled with IntelliJ.
+The Maven Wrapper uses Maven 3.9.11, so there is no need to install Maven separately.
+The first run needs an internet connection to download Maven and the dependencies.
 Set `JAVA_HOME` to your JDK folder.
 
 From PowerShell, in the project folder:
 
 ```powershell
-mvn package
+.\mvnw.cmd package
 java -jar target/hotel-booking-1.0.0.jar
 ```
 
@@ -29,7 +30,7 @@ java -jar target/hotel-booking-1.0.0.jar path/to/data/folder
 
 That folder must contain `rooms.csv`, `guests.csv` and `reservations.csv`.
 In IntelliJ, open the project and run `com.junia.hotel.Application`.
-Choose option 0 to quit.
+On Linux or macOS, use `./mvnw` instead of `.\mvnw.cmd`. Choose option 0 to quit.
 
 ## 3. Main features
 
@@ -154,7 +155,7 @@ checks before storing those reservations.
 ## 12. Tests
 
 ```powershell
-mvn test
+.\mvnw.cmd test
 ```
 
 There are 67 JUnit 5 tests. They check bookings, pricing, cancellations, imports and reports,
